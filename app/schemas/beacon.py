@@ -18,6 +18,16 @@ class BeaconCreate(BeaconBase):
     pass
 
 
+class BeaconUpdate(BaseModel):
+    uuid: str | None = None
+    major: int | None = None
+    minor: int | None = None
+    name: str | None = None
+    location_id: UUID | None = None
+    battery_level: int | None = None
+    last_seen: datetime | None = None
+
+
 class BeaconResponse(BeaconBase):
     id: UUID
     created_at: datetime

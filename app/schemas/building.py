@@ -13,6 +13,11 @@ class BuildingCreate(BuildingBase):
     pass
 
 
+class BuildingUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+
+
 class BuildingResponse(BuildingBase):
     id: UUID
     created_at: datetime

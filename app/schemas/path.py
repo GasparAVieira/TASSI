@@ -17,6 +17,14 @@ class PathCreate(PathBase):
     pass
 
 
+class PathUpdate(BaseModel):
+    from_location: UUID | None = None
+    to_location: UUID | None = None
+    distance: Decimal | None = None
+    direction: str | None = None
+    is_accessible: bool | None = None
+
+
 class PathResponse(PathBase):
     id: UUID
     created_at: datetime

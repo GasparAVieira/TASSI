@@ -19,6 +19,16 @@ class RoomCreate(RoomBase):
     pass
 
 
+class RoomUpdate(BaseModel):
+    building_id: UUID | None = None
+    location_id: UUID | None = None
+    name: str | None = None
+    floor: int | None = None
+    is_accessible: bool | None = None
+    x: Decimal | None = None
+    y: Decimal | None = None
+
+
 class RoomResponse(RoomBase):
     id: UUID
     created_at: datetime
