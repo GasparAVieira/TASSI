@@ -3,10 +3,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_current_user
 from app.models.location import Location
 from app.models.path import Path
-from app.models.user import User
 from app.schemas.path import PathCreate, PathResponse
 
 router = APIRouter(prefix="/api/v1/paths", tags=["Paths"])
@@ -16,7 +14,6 @@ router = APIRouter(prefix="/api/v1/paths", tags=["Paths"])
 def create_path(
     payload: PathCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     from_location = db.query(Location).filter(Location.id == payload.from_location).first()
     if not from_location:
@@ -52,6 +49,5 @@ def create_path(
 @router.get("/", response_model=list[PathResponse])
 def list_paths(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     return db.query(Path).all()
