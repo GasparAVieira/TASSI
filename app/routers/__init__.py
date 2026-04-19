@@ -1,0 +1,1 @@
+from app.routers import auth, users, buildings, locations, rooms, beacons, paths
