@@ -1,0 +1,38 @@
+[
+  {
+    "q": "Como funciona a navegação interna?",
+    "a": "A aplicação utiliza beacons Bluetooth colocados em todos os edifícios do campus para identificar a sua localização. Combinado com os planos dos edifícios, fornece indicações passo a passo para qualquer sala de aula, laboratório ou instalação."
+  },
+  {
+    "q": "Que funcionalidades de acessibilidade estão disponíveis?",
+    "a": "Oferecemos rotas adequadas para cadeiras de rodas (elevadores e rampas), navegação por áudio com velocidade de fala ajustável, modo de alto contraste, opções de texto grande e suporte total para leitores de ecrã para utilizadores com deficiência visual."
+  },
+  {
+    "q": "Como torno as minhas entradas no diário públicas?",
+    "a": "Ao visualizar uma entrada, verá um indicador de privacidade. Apenas as entradas públicas podem receber respostas dos administradores. Pode alterar esta definição ao criar ou editar uma entrada."
+  },
+  {
+    "q": "O que acontece às minhas gravações de áudio?",
+    "a": "As gravações de áudio são transcritas automaticamente utilizando tecnologia de fala para texto, tornando o conteúdo acessível a todos os utilizadores. O áudio original e a transcrição são armazenados de forma segura e privada, a menos que torne a entrada pública."
+  },
+  {
+    "q": "Os administradores podem ver as minhas entradas privadas?",
+    "a": "Não. As entradas privadas são visíveis apenas para si. Apenas as entradas marcadas como 'Públicas' podem ser visualizadas pelos administradores do campus, e pode conversar com eles sobre estas entradas."
+  },
+  {
+    "q": "Como ativo a navegação por áudio?",
+    "a": "Vá a Perfil > Definições > Secção de Áudio e ative 'Navegação por Áudio'. Pode ajustar a velocidade da fala e testar a funcionalidade. A aplicação dirá as direções à medida que navega."
+  },
+  {
+    "q": "E se eu estiver num local desconhecido?",
+    "a": "Se o sistema não reconhecer a sua localização, a funcionalidade de navegação pode não funcionar como esperado."
+  },
+  {
+    "q": "Os meus dados estão seguros?",
+    "a": "Sim. Todos os dados são encriptados e armazenados de forma segura. Cumprimos os regulamentos do RGPD. Consulte o nosso separador RGPD para obter informações detalhadas sobre a proteção de dados e os seus direitos."
+  },
+  {
+    "q": "Como contacto o suporte?",
+    "a": "Para suporte técnico ou assistência de acessibilidade, contacte o TI do campus em support@university.edu."
+  }
+]

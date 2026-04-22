@@ -1,0 +1,1065 @@
+import 'package:flutter/material.dart';
+import '../pages/diary_page.dart';
+import '../services/settings_service.dart';
+import 'diary_entry_widgets.dart';
+
+void showDiaryEntryPopup(BuildContext context, DiaryEntry entry) {
+  final theme = Theme.of(context);
+  final SettingsService settings = SettingsService();
+  final isDark = theme.brightness == Brightness.dark;
+
+  showDialog(
+    context: context,
+    useSafeArea: true,
+    barrierColor: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.5),
+    builder: (context) {
+      return Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: settings.isHighContrast
+              ? BorderSide(color: theme.colorScheme.onSurface, width: 2)
+              : BorderSide.none,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            entry.title,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              _buildStatusChip(
+                                theme,
+                                Icons.calendar_today,
+                                entry.date,
+                                color: theme.colorScheme.primaryContainer,
+                                textColor: theme.colorScheme.onPrimaryContainer,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildStatusChip(
+                                theme,
+                                entry.isPrivate ? Icons.lock : Icons.public,
+                                entry.isPrivate ? 'Private' : 'Public',
+                                color: entry.isPrivate
+                                    ? theme.colorScheme.secondaryContainer
+                                    : theme.colorScheme.tertiaryContainer,
+                                textColor: entry.isPrivate
+                                    ? theme.colorScheme.onSecondaryContainer
+                                    : theme.colorScheme.onTertiaryContainer,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (entry.content.isNotEmpty) ...[
+                        _CollapsibleSection(
+                          title: 'Text Content',
+                          initialExpanded: true,
+                          child: _ScrollableTextSection(content: entry.content),
+                        ),
+                        const Divider(height: 1),
+                      ],
+
+                      if (entry.audioCount > 0) ...[
+                        _CollapsibleSection(
+                          title: 'Audio Recordings (${entry.audioCount})',
+                          child: Column(
+                            children: entry.audioRecordings.map((rec) => _buildAudioPlayer(theme, rec)).toList(),
+                          ),
+                        ),
+                        const Divider(height: 1),
+                      ],
+
+                      if (entry.imageCount > 0) ...[
+                        _CollapsibleSection(
+                          title: 'Images (${entry.imageCount})',
+                          child: _ImageCarousel(images: entry.images),
+                        ),
+                        const Divider(height: 1),
+                      ],
+
+                      if (entry.videoCount > 0) ...[
+                        _CollapsibleSection(
+                          title: 'Videos (${entry.videoCount})',
+                          child: _VideoCarousel(videos: entry.videos),
+                        ),
+                        const Divider(height: 1),
+                      ],
+
+                      _CollapsibleSection(
+                        title: 'Chat Assistance',
+                        initialExpanded: true,
+                        badgeCount: entry.badgeCount,
+                        child: _buildChatSection(context, theme, entry, settings),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Footer / Metadata
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: theme.colorScheme.outlineVariant),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.location_on_outlined, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 8),
+                      Text(
+                        entry.location,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _CollapsibleSection extends StatefulWidget {
+  final String title;
+  final Widget child;
+  final bool initialExpanded;
+  final int? badgeCount;
+
+  const _CollapsibleSection({
+    required this.title,
+    required this.child,
+    this.initialExpanded = false,
+    this.badgeCount,
+  });
+
+  @override
+  State<_CollapsibleSection> createState() => _CollapsibleSectionState();
+}
+
+class _CollapsibleSectionState extends State<_CollapsibleSection> with SingleTickerProviderStateMixin {
+  late bool _isExpanded;
+  late AnimationController _controller;
+  late Animation<double> _heightFactor;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initialExpanded;
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _heightFactor = _controller.drive(CurveTween(curve: Curves.easeInOut));
+    if (_isExpanded) {
+      _controller.value = 1.0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+      if (_isExpanded) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _handleTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                Text(
+                  widget.title,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (widget.badgeCount != null && widget.badgeCount! > 0) ...[
+                  const SizedBox(width: 8),
+                  PulsingBadge(label: widget.badgeCount.toString()),
+                ],
+                const Spacer(),
+                RotationTransition(
+                  turns: _controller.drive(Tween(begin: 0.0, end: 0.5)),
+                  child: const Icon(
+                    Icons.expand_more,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizeTransition(
+          sizeFactor: _heightFactor,
+          axisAlignment: -1.0,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: widget.child,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+Widget _buildStatusChip(ThemeData theme, IconData icon, String label, {required Color color, required Color textColor}) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: textColor),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: textColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ScrollableTextSection extends StatefulWidget {
+  final String content;
+  const _ScrollableTextSection({required this.content});
+
+  @override
+  State<_ScrollableTextSection> createState() => _ScrollableTextSectionState();
+}
+
+class _ScrollableTextSectionState extends State<_ScrollableTextSection> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 140),
+        child: Scrollbar(
+          thumbVisibility: true,
+          controller: _scrollController,
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              widget.content,
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _buildAudioPlayer(ThemeData theme, AudioRecording rec) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.play_arrow, color: theme.colorScheme.onPrimaryContainer),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    children: [
+                      LinearProgressIndicator(
+                        value: 0.3,
+                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text('00:20 / ${rec.duration}', style: theme.textTheme.labelSmall),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Theme(
+            data: theme.copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              title: Text('Transcription', style: theme.textTheme.labelMedium),
+              dense: true,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: _ScrollableTranscription(text: rec.transcription),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _ScrollableTranscription extends StatefulWidget {
+  final String text;
+  const _ScrollableTranscription({required this.text});
+
+  @override
+  State<_ScrollableTranscription> createState() => _ScrollableTranscriptionState();
+}
+
+class _ScrollableTranscriptionState extends State<_ScrollableTranscription> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(maxHeight: 80),
+      child: Scrollbar(
+        thumbVisibility: true,
+        controller: _scrollController,
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 12), // Spacing for scrollbar
+            child: Text(
+              widget.text,
+              style: theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ImageCarousel extends StatefulWidget {
+  final List<String> images;
+  const _ImageCarousel({required this.images});
+
+  @override
+  State<_ImageCarousel> createState() => _ImageCarouselState();
+}
+
+class _ImageCarouselState extends State<_ImageCarousel> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      height: 140,
+      child: Scrollbar(
+        controller: _scrollController,
+        thumbVisibility: true,
+        child: ListView.separated(
+          controller: _scrollController,
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.only(bottom: 12),
+          itemCount: widget.images.length,
+          separatorBuilder: (context, index) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            return Container(
+              width: 180,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              child: Icon(Icons.image_outlined, size: 48, color: theme.colorScheme.onSurfaceVariant),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _VideoCarousel extends StatefulWidget {
+  final List<String> videos;
+  const _VideoCarousel({required this.videos});
+
+  @override
+  State<_VideoCarousel> createState() => _VideoCarouselState();
+}
+
+class _VideoCarouselState extends State<_VideoCarousel> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        SizedBox(
+          height: 180,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PageView.builder(
+                controller: _pageController,
+                onPageChanged: (idx) => setState(() => _currentPage = idx),
+                itemCount: widget.videos.length,
+                itemBuilder: (context, index) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: theme.colorScheme.outlineVariant),
+                    ),
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.8),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.play_arrow, color: theme.colorScheme.onPrimary, size: 32),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              if (widget.videos.length > 1) ...[
+                Positioned(
+                  left: 8,
+                  child: IconButton.filledTonal(
+                    onPressed: _currentPage > 0 
+                        ? () => _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut) 
+                        : null,
+                    icon: const Icon(Icons.chevron_left),
+                  ),
+                ),
+                Positioned(
+                  right: 8,
+                  child: IconButton.filledTonal(
+                    onPressed: _currentPage < widget.videos.length - 1 
+                        ? () => _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut) 
+                        : null,
+                    icon: const Icon(Icons.chevron_right),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (widget.videos.length > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(widget.videos.length, (index) {
+              return Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _currentPage == index 
+                      ? theme.colorScheme.primary 
+                      : theme.colorScheme.outlineVariant,
+                ),
+              );
+            }),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+Widget _buildChatSection(BuildContext context, ThemeData theme, DiaryEntry entry, SettingsService settings) {
+  if (entry.isPrivate) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Set Entry to Public to Message Us!',
+            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: () {},
+            style: FilledButton.styleFrom(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Turn Chat Public'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  return Column(
+    children: [
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+        ),
+        child: entry.messages.isEmpty 
+            ? _buildEmptyChat(theme) 
+            : _buildChatList(theme, entry.messages, settings),
+      ),
+      const SizedBox(height: 12),
+      Row(
+        children: [
+          Expanded(
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Type a message...',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _ChatSendButton(settings: settings),
+        ],
+      ),
+    ],
+  );
+}
+
+class _ChatSendButton extends StatelessWidget {
+  final SettingsService settings;
+  const _ChatSendButton({required this.settings});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    Color buttonColor;
+    Color iconColor;
+
+    if (settings.isHighContrast) {
+      buttonColor = theme.colorScheme.primary;
+      iconColor = theme.colorScheme.onPrimary;
+    } else {
+      buttonColor = isDark ? theme.colorScheme.primaryContainer.withValues(alpha: 0.7) : theme.colorScheme.primary;
+      iconColor = isDark ? theme.colorScheme.onPrimaryContainer : Colors.white;
+    }
+
+    return Material(
+      color: buttonColor,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () {},
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          child: Icon(Icons.send, color: iconColor),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _buildChatList(ThemeData theme, List<ChatMessage> messages, SettingsService settings) {
+  final oldMessages = messages.length > 1 ? messages.sublist(0, messages.length - 1) : messages;
+  final newMessages = messages.length > 1 ? [messages.last] : [];
+
+  return Column(
+    children: [
+      ...oldMessages.map((msg) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _buildChatMessage(theme, msg, settings),
+      )),
+      if (newMessages.isNotEmpty) ...[
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              const Expanded(child: Divider()),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  'NEW MESSAGES',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+              const Expanded(child: Divider()),
+            ],
+          ),
+        ),
+        ...newMessages.map((msg) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildChatMessage(theme, msg, settings),
+        )),
+      ],
+    ],
+  );
+}
+
+Widget _buildEmptyChat(ThemeData theme) {
+  return Column(
+    children: [
+      const SizedBox(height: 8),
+      Icon(Icons.chat_bubble_outline, size: 32, color: theme.colorScheme.onSurfaceVariant),
+      const SizedBox(height: 8),
+      Text(
+        'No messages yet. Tell us something!',
+        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+      ),
+      const SizedBox(height: 8),
+    ],
+  );
+}
+
+Widget _buildChatMessage(ThemeData theme, ChatMessage msg, SettingsService settings) {
+  Color bubbleColor;
+  Color textColor;
+  Color subTextColor;
+
+  if (msg.isAdmin) {
+    bubbleColor = theme.colorScheme.surface;
+    textColor = theme.colorScheme.onSurface;
+    subTextColor = theme.colorScheme.onSurfaceVariant;
+  } else {
+    if (settings.isHighContrast) {
+      bubbleColor = theme.colorScheme.primary;
+      textColor = theme.colorScheme.onPrimary;
+      subTextColor = theme.colorScheme.onPrimary.withValues(alpha: 0.8);
+    } else {
+      bubbleColor = theme.colorScheme.primaryContainer.withValues(alpha: 0.7);
+      textColor = theme.colorScheme.onPrimaryContainer;
+      subTextColor = theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8);
+    }
+  }
+
+  return Column(
+    crossAxisAlignment: msg.isAdmin ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+    children: [
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: bubbleColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 12,
+                  backgroundColor: msg.isAdmin ? theme.colorScheme.secondary : theme.colorScheme.primary,
+                  child: Icon(
+                    msg.isAdmin ? Icons.admin_panel_settings : Icons.person, 
+                    size: 14, 
+                    color: settings.isHighContrast ? theme.colorScheme.onPrimary : Colors.white
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      msg.sender, 
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    Text(
+                      msg.time,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontSize: 10, 
+                        color: subTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              msg.content, 
+              style: theme.textTheme.bodySmall?.copyWith(color: textColor),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+class NewDiaryEntryCard extends StatefulWidget {
+  final VoidCallback onCancel;
+  final Function(String title, String notes, bool isPrivate, List<String> media) onSave;
+
+  const NewDiaryEntryCard({
+    super.key,
+    required this.onCancel,
+    required this.onSave,
+  });
+
+  @override
+  State<NewDiaryEntryCard> createState() => _NewDiaryEntryCardState();
+}
+
+class _NewDiaryEntryCardState extends State<NewDiaryEntryCard> {
+  final _titleController = TextEditingController();
+  final _notesController = TextEditingController();
+  bool _isPrivate = true;
+  String? _titleError;
+  String? _notesError;
+  final List<String> _attachedMedia = [];
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  void _validateAndSave() {
+    setState(() {
+      _titleError = _titleController.text.trim().isEmpty ? 'Title is required' : null;
+      _notesError = _notesController.text.trim().isEmpty ? 'Please describe your experience' : null;
+    });
+
+    if (_titleError == null && _notesError == null) {
+      widget.onSave(_titleController.text, _notesController.text, _isPrivate, _attachedMedia);
+    }
+  }
+
+  void _showMediaChoice(String type) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(type == 'Audio' ? Icons.mic : type == 'Image' ? Icons.camera_alt : Icons.videocam),
+              title: Text('Record/Take New $type'),
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _attachedMedia.add('New $type Recording'));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.file_upload),
+              title: Text('Pick Existing $type'),
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _attachedMedia.add('Existing $type File'));
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorText(ThemeData theme, String message) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Icon(Icons.error, color: theme.colorScheme.error, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            message,
+            style: TextStyle(
+              color: theme.colorScheme.error,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Create New Entry',
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: widget.onCancel,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _titleController,
+            onChanged: (v) => setState(() => _titleError = null),
+            decoration: InputDecoration(
+              labelText: 'Entry Title',
+              hintText: 'e.g. Day One on Campus',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          if (_titleError != null) _buildErrorText(theme, _titleError!),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _notesController,
+            onChanged: (v) => setState(() => _notesError = null),
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: 'Notes',
+              hintText: 'Describe your experience...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          if (_notesError != null) _buildErrorText(theme, _notesError!),
+          
+          if (_attachedMedia.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'ATTACHMENTS',
+              style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: _attachedMedia.map((m) => Chip(
+                label: Text(m, style: const TextStyle(fontSize: 10)),
+                onDeleted: () => setState(() => _attachedMedia.remove(m)),
+              )).toList(),
+            ),
+          ],
+
+          const SizedBox(height: 24),
+          Text(
+            'ATTACH MEDIA',
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                _buildMediaActionButton(theme, Icons.mic, 'Audio'),
+                const SizedBox(width: 12),
+                _buildMediaActionButton(theme, Icons.image, 'Image'),
+                const SizedBox(width: 12),
+                _buildMediaActionButton(theme, Icons.videocam, 'Video'),
+                const VerticalDivider(width: 32, indent: 8, endIndent: 8),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Switch(
+                        value: _isPrivate, 
+                        onChanged: (v) => setState(() => _isPrivate = v),
+                      ),
+                      Text(
+                        'Private', 
+                        style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _validateAndSave,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Save Entry'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMediaActionButton(ThemeData theme, IconData icon, String label) {
+    return Column(
+      children: [
+        Material(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: () => _showMediaChoice(label),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              child: Icon(icon, color: theme.colorScheme.primary),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(label, style: theme.textTheme.labelSmall),
+      ],
+    );
+  }
+}

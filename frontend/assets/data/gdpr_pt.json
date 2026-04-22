@@ -1,0 +1,61 @@
+{
+  "headerTitle": "RGPD e Privacidade",
+  "headerSubtitle": "Informações sobre Proteção de Dados",
+  "exportRequestSuccess": "Pedido de exportação de dados submetido. Receberá um e-mail em 48 horas.",
+  "deletionRequestSuccess": "Os pedidos de eliminação de dados devem ser confirmados. Verifique o seu e-mail para os próximos passos.",
+  "exportButton": "Solicitar Exportação de Dados",
+  "deletionButton": "Solicitar Eliminação de Conta",
+  "dpoTitle": "Encarregado de Proteção de Dados:",
+  "emailLabel": "E-mail",
+  "phoneLabel": "Telefone",
+  "officeLabel": "Gabinete",
+  "sections": [
+    {
+      "title": "Dados que Recolhemos",
+      "items": [
+        "Informações de Conta: Nome, e-mail, telefone (opcional)",
+        "Dados de Localização: Edifício, piso, sala utilizada na navegação",
+        "Conteúdo do Diário: Texto, áudio, imagens, vídeos que cria",
+        "Dados de Utilização: Interações na aplicação, preferências de acessibilidade",
+        "Comunicação: Mensagens com administradores do campus"
+      ]
+    },
+    {
+      "title": "Como Utilizamos os Seus Dados",
+      "items": [
+        "Fornecer serviços de navegação interna",
+        "Armazenar e organizar as suas entradas pessoais no diário",
+        "Permitir a comunicação com administradores do campus",
+        "Garantir a segurança do campus",
+        "Analisar padrões de utilização para melhorar a aplicação (anónimos)"
+      ]
+    },
+    {
+      "title": "Os Seus Direitos ao Abrigo do RGPD",
+      "items": [
+        "Direito de Acesso: Pode solicitar uma cópia de todos os dados pessoais que detemos sobre si.",
+        "Direito de Retificação: Pode atualizar ou corrigir as suas informações pessoais a qualquer momento.",
+        "Direito ao Apagamento: Pode solicitar a eliminação da sua conta e de todos os dados associados.",
+        "Direito à Limitação do Tratamento: Pode limitar a forma como utilizamos os seus dados.",
+        "Direito à Portabilidade dos Dados: Pode exportar os seus dados num formato legível por máquina.",
+        "Direito de Oposição: Pode opor-se a certos tipos de tratamento de dados."
+      ]
+    },
+    {
+      "title": "Segurança de Dados",
+      "introText": "Implementamos medidas padrão da indústria para proteger os seus dados de forma segura:",
+      "items": [
+        "Encriptação de ponta a ponta para todas as transmissões",
+        "Servidores seguros com auditorias de segurança regulares",
+        "Controlos de acesso e autenticação",
+        "Cópias de segurança regulares e recuperação de desastres",
+        "Formação do pessoal em proteção de dados"
+      ]
+    }
+  ],
+  "dpo": {
+    "email": "dpo@university.edu",
+    "phone": "+1 (555) 123-4567",
+    "office": "Edifício Principal, Sala A105"
+  }
+}

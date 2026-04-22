@@ -1,0 +1,51 @@
+{
+  "sections": [
+    {
+      "title": "Data We Collect",
+      "items": [
+        "Account Information: Name, email, phone (optional)",
+        "Location Data: Building, floor, room used in navigation",
+        "Diary Content: Text, audio, images, videos you create",
+        "Usage Data: App interactions, accessibility preferences",
+        "Communication: Messages with campus administrators"
+      ]
+    },
+    {
+      "title": "How We Use Your Data",
+      "items": [
+        "Provide indoor navigation services",
+        "Store and organize your personal diary entries",
+        "Enable communication with campus administrators",
+        "Ensure campus safety and security",
+        "Analyze usage patterns to improve the app (anonymized)"
+      ]
+    },
+    {
+      "title": "Your Rights Under GDPR",
+      "items": [
+        "Right to Access: You can request a copy of all personal data we hold about you.",
+        "Right to Rectification: You can update or correct your personal information at any time.",
+        "Right to Erasure: You can request deletion of your account and all associated data.",
+        "Right to Restrict Processing: You can limit how we use your data.",
+        "Right to Data Portability: You can export your data in a machine-readable format.",
+        "Right to Object: You can object to certain types of data processing."
+      ]
+    },
+    {
+      "title": "Data Security",
+      "introText": "We implement industry-standard measures to protect your data securely:",
+      "items": [
+        "End-to-end encryption for all transmissions",
+        "Secure servers with regular security audits",
+        "Access controls and authentication",
+        "Regular backups and disaster recovery",
+        "Staff training on data protection"
+      ]
+    }
+  ],
+  "dpo": {
+    "email": "dpo@university.edu",
+    "phone": "+1 (555) 123-4567",
+    "office": "Main Building, Room A105"
+  }
+}

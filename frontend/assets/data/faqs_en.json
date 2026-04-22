@@ -1,0 +1,38 @@
+[
+  {
+    "q": "How does indoor navigation work?",
+    "a": "The app uses Bluetooth beacons placed throughout campus buildings to pinpoint your location. Combined with building floor plans, it provides turn-by-turn directions to any classroom, lab, or facility."
+  },
+  {
+    "q": "What accessibility features are available?",
+    "a": "We offer wheelchair-friendly routing (elevators and ramps), audio navigation with adjustable speech rate, high contrast mode, large text options, and full screen reader support for visually impaired users."
+  },
+  {
+    "q": "How do I make my diary entries public?",
+    "a": "When viewing an entry, you'll see a privacy indicator. Only public entries can receive admin responses. You can toggle this setting when creating or editing an entry."
+  },
+  {
+    "q": "What happens to my audio recordings?",
+    "a": "Audio recordings are automatically transcribed using speech-to-text technology, making content accessible to all users. The original audio and transcription are stored securely and privately unless you make the entry public."
+  },
+  {
+    "q": "Can admins see my private entries?",
+    "a": "No. Private entries are visible only to you. Only entries marked as 'Public' can be viewed by campus administrators, and you can chat with them about these entries."
+  },
+  {
+    "q": "How do I enable audio navigation?",
+    "a": "Go to Profile > Settings > Audio section and toggle 'Audio Navigation' on. You can adjust the speech rate and test the feature. The app will speak directions as you navigate."
+  },
+  {
+    "q": "What if I'm in an unknown location?",
+    "a": "If the system doesn't recognize your location, the navigation feature might not work as expected."
+  },
+  {
+    "q": "Is my data secure?",
+    "a": "Yes. All data is encrypted and stored securely. We comply with GDPR regulations. See our GDPR tab for detailed information about data protection and your rights."
+  },
+  {
+    "q": "How do I contact support?",
+    "a": "For technical support or accessibility assistance, contact campus IT at support@university.edu."
+  }
+]
