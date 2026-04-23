@@ -22,6 +22,9 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
         phone=payload.phone,
         bio=payload.bio,
         role=payload.role,
+        accessibility_profile=payload.accessibility_profile,
+        preferred_language=payload.preferred_language,
+        audio_guidance=payload.audio_guidance,
     )
 
     db.add(user)

@@ -1,33 +1,65 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import Literal
 
-
-class DiaryEntryBase(BaseModel):
-    title: str
-    text_content: Optional[str] = None
-    transcription: Optional[str] = None
-    is_public: bool = False
-    location_label: Optional[str] = None
-    user_id: str
+from app.schemas.diary_media import DiaryMediaCreate, DiaryMediaResponse
 
 
-class DiaryEntryCreate(DiaryEntryBase):
-    pass
+class DiaryEntryCreate(BaseModel):
+    entry_type: Literal["text", "audio", "image", "video"]
+    body: Optional[str] = None
+    duration_sec: Optional[float] = None
+    recorded_at: datetime
+
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+    location_id: Optional[UUID] = None
+    building_id: Optional[UUID] = None
+    beacon_id: Optional[UUID] = None
+
+    context_notes: Optional[dict[str, Any]] = None
+    is_synced: bool = True
+
+    media_items: list[DiaryMediaCreate] = Field(default_factory=list)
 
 
 class DiaryEntryUpdate(BaseModel):
-    title: Optional[str] = None
-    text_content: Optional[str] = None
-    transcription: Optional[str] = None
-    is_public: Optional[bool] = None
-    location_label: Optional[str] = None
+    body: Optional[str] = None
+    duration_sec: Optional[float] = None
+    recorded_at: Optional[datetime] = None
+
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+    location_id: Optional[UUID] = None
+    building_id: Optional[UUID] = None
+    beacon_id: Optional[UUID] = None
+
+    context_notes: Optional[dict[str, Any]] = None
+    is_synced: Optional[bool] = None
 
 
-class DiaryEntryResponse(DiaryEntryBase):
-    id: int
+class DiaryEntryResponse(BaseModel):
+    id: UUID
+    participant_id: UUID
+    entry_type: str
+    body: Optional[str] = None
+    duration_sec: Optional[float] = None
+    recorded_at: datetime
+
+    location_id: Optional[UUID] = None
+    building_id: Optional[UUID] = None
+    beacon_id: Optional[UUID] = None
+
+    context_notes: Optional[dict[str, Any]] = None
+    is_synced: bool
     created_at: datetime
     updated_at: datetime
+
+    media_items: list[DiaryMediaResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)

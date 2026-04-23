@@ -6,3 +6,5 @@ from app.models.room import Room
 from app.models.route import Route
 from app.models.route_step import RouteStep
 from app.models.user import User
+from .diary_entry import DiaryEntry
+from .diary_media import DiaryMedia

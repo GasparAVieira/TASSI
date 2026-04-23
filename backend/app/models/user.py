@@ -2,7 +2,7 @@ import uuid
 
 from sqlalchemy import Boolean, DateTime, Enum, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import AccessibilityProfile, Language, UserRole
 from app.database import Base
@@ -54,3 +54,5 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+    diary_entries = relationship("DiaryEntry", back_populates="participant", cascade="all, delete-orphan")

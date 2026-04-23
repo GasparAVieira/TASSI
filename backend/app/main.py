@@ -4,6 +4,7 @@ from app.config import settings
 from app.database import Base, engine
 from app.routers import auth, beacons, buildings, locations, navigation, paths, rooms, routes, route_steps, users
 import app.models
+from backend.app.routers import diary_entries
 
 
 Base.metadata.create_all(bind=engine)
@@ -29,3 +30,4 @@ app.include_router(paths.router)
 app.include_router(navigation.router)
 app.include_router(routes.router)
 app.include_router(route_steps.router)
+app.include_router(diary_entries.router)
