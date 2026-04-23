@@ -3,17 +3,33 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
+from app.core.enums import AccessibilityProfile, Language, UserRole
+
 
 class UserBase(BaseModel):
     full_name: str
     email: EmailStr
     phone: str | None = None
     bio: str | None = None
-    role: str = "user"
+    role: UserRole = UserRole.user
+    accessibility_profile: AccessibilityProfile = AccessibilityProfile.none
+    preferred_language: Language = Language.pt
+    audio_guidance: bool = False
 
 
 class UserCreate(UserBase):
     password: str
+
+
+class UserUpdate(BaseModel):
+    full_name: str | None = None
+    email: EmailStr | None = None
+    phone: str | None = None
+    bio: str | None = None
+    role: UserRole | None = None
+    accessibility_profile: AccessibilityProfile | None = None
+    preferred_language: Language | None = None
+    audio_guidance: bool | None = None
 
 
 class UserResponse(UserBase):

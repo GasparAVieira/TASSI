@@ -33,14 +33,16 @@ def create_route_step(
         route_id=payload.route_id,
         location_id=payload.location_id,
         step_order=payload.step_order,
+        note=payload.note,
     )
+
     db.add(route_step)
 
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Duplicate step_order for this route")
+        raise HTTPException(status_code=400, detail="Duplicate step order for this route")
 
     db.refresh(route_step)
     return route_step
@@ -49,6 +51,14 @@ def create_route_step(
 @router.get("/", response_model=list[RouteStepResponse])
 def list_route_steps(db: Session = Depends(get_db)):
     return db.query(RouteStep).all()
+
+
+@router.get("/{route_step_id}", response_model=RouteStepResponse)
+def get_route_step(route_step_id: UUID, db: Session = Depends(get_db)):
+    route_step = db.query(RouteStep).filter(RouteStep.id == route_step_id).first()
+    if not route_step:
+        raise HTTPException(status_code=404, detail="Route step not found")
+    return route_step
 
 
 @router.patch("/{route_step_id}", response_model=RouteStepResponse)
@@ -81,7 +91,7 @@ def update_route_step(
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Duplicate step_order for this route")
+        raise HTTPException(status_code=400, detail="Duplicate step order for this route")
 
     db.refresh(route_step)
     return route_step

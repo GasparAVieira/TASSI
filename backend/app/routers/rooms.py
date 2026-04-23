@@ -1,7 +1,6 @@
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 from app.database import get_db
 from app.dependencies import require_admin
@@ -24,19 +23,18 @@ def create_room(
     if not building:
         raise HTTPException(status_code=404, detail="Building not found")
 
-    if payload.location_id:
-        location = db.query(Location).filter(Location.id == payload.location_id).first()
-        if not location:
-            raise HTTPException(status_code=404, detail="Location not found")
+    location = db.query(Location).filter(Location.id == payload.location_id).first()
+    if not location:
+        raise HTTPException(status_code=404, detail="Location not found")
 
     room = Room(
         building_id=payload.building_id,
         location_id=payload.location_id,
+        code=payload.code,
         name=payload.name,
         floor=payload.floor,
         is_accessible=payload.is_accessible,
-        x=payload.x,
-        y=payload.y,
+        capacity=payload.capacity,
     )
 
     db.add(room)
@@ -48,6 +46,14 @@ def create_room(
 @router.get("/", response_model=list[RoomResponse])
 def list_rooms(db: Session = Depends(get_db)):
     return db.query(Room).all()
+
+
+@router.get("/{room_id}", response_model=RoomResponse)
+def get_room(room_id: UUID, db: Session = Depends(get_db)):
+    room = db.query(Room).filter(Room.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return room
 
 
 @router.patch("/{room_id}", response_model=RoomResponse)
@@ -68,7 +74,7 @@ def update_room(
         if not building:
             raise HTTPException(status_code=404, detail="Building not found")
 
-    if "location_id" in update_data and update_data["location_id"] is not None:
+    if "location_id" in update_data:
         location = db.query(Location).filter(Location.id == update_data["location_id"]).first()
         if not location:
             raise HTTPException(status_code=404, detail="Location not found")

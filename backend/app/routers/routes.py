@@ -19,9 +19,13 @@ def create_route(
     current_user: User = Depends(require_admin),
 ):
     route = Route(
+        owner_id=payload.owner_id,
         name=payload.name,
         description=payload.description,
+        is_public=payload.is_public,
+        language=payload.language,
     )
+
     db.add(route)
     db.commit()
     db.refresh(route)
@@ -31,6 +35,14 @@ def create_route(
 @router.get("/", response_model=list[RouteResponse])
 def list_routes(db: Session = Depends(get_db)):
     return db.query(Route).all()
+
+
+@router.get("/{route_id}", response_model=RouteResponse)
+def get_route(route_id: UUID, db: Session = Depends(get_db)):
+    route = db.query(Route).filter(Route.id == route_id).first()
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+    return route
 
 
 @router.patch("/{route_id}", response_model=RouteResponse)

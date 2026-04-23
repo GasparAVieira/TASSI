@@ -1,28 +1,25 @@
 from datetime import datetime
 from decimal import Decimal
-from enum import Enum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-
-class PathDirection(str, Enum):
-    straight = "straight"
-    left = "left"
-    right = "right"
-    stairs_up = "stairs_up"
-    stairs_down = "stairs_down"
-    elevator_up = "elevator_up"
-    elevator_down = "elevator_down"
-    exit = "exit"
+from app.core.enums import Direction
 
 
 class PathBase(BaseModel):
     from_location: UUID
     to_location: UUID
     distance: Decimal
-    direction: PathDirection
+    weight_default: Decimal
+    weight_wheelchair: Decimal | None = None
+    weight_blind: Decimal | None = None
+    direction: Direction
+    bearing: Decimal | None = None
+    is_bidirectional: bool = False
     is_accessible: bool = False
+    instruction_pt: str | None = None
+    instruction_en: str | None = None
 
 
 class PathCreate(PathBase):
@@ -33,8 +30,15 @@ class PathUpdate(BaseModel):
     from_location: UUID | None = None
     to_location: UUID | None = None
     distance: Decimal | None = None
-    direction: PathDirection | None = None
+    weight_default: Decimal | None = None
+    weight_wheelchair: Decimal | None = None
+    weight_blind: Decimal | None = None
+    direction: Direction | None = None
+    bearing: Decimal | None = None
+    is_bidirectional: bool | None = None
     is_accessible: bool | None = None
+    instruction_pt: str | None = None
+    instruction_en: str | None = None
 
 
 class PathResponse(PathBase):

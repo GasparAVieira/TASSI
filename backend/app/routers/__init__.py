@@ -6,9 +6,7 @@ from app.routers import (
     rooms,
     beacons,
     paths,
+    navigation,
     routes,
     route_steps,
-    points_of_interest,
-    poi_media,
-    faqs,
 )

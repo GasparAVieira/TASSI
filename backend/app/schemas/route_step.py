@@ -8,6 +8,7 @@ class RouteStepBase(BaseModel):
     route_id: UUID
     location_id: UUID
     step_order: int
+    note: str | None = None
 
 
 class RouteStepCreate(RouteStepBase):
@@ -18,6 +19,7 @@ class RouteStepUpdate(BaseModel):
     route_id: UUID | None = None
     location_id: UUID | None = None
     step_order: int | None = None
+    note: str | None = None
 
 
 class RouteStepResponse(RouteStepBase):

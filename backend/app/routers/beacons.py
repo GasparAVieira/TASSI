@@ -1,7 +1,6 @@
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 from app.database import get_db
 from app.dependencies import require_admin
@@ -19,9 +18,10 @@ def create_beacon(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    location = db.query(Location).filter(Location.id == payload.location_id).first()
-    if not location:
-        raise HTTPException(status_code=404, detail="Location not found")
+    if payload.location_id is not None:
+        location = db.query(Location).filter(Location.id == payload.location_id).first()
+        if not location:
+            raise HTTPException(status_code=404, detail="Location not found")
 
     beacon = Beacon(
         uuid=payload.uuid,
@@ -44,6 +44,14 @@ def list_beacons(db: Session = Depends(get_db)):
     return db.query(Beacon).all()
 
 
+@router.get("/{beacon_id}", response_model=BeaconResponse)
+def get_beacon(beacon_id: UUID, db: Session = Depends(get_db)):
+    beacon = db.query(Beacon).filter(Beacon.id == beacon_id).first()
+    if not beacon:
+        raise HTTPException(status_code=404, detail="Beacon not found")
+    return beacon
+
+
 @router.patch("/{beacon_id}", response_model=BeaconResponse)
 def update_beacon(
     beacon_id: UUID,
@@ -57,7 +65,7 @@ def update_beacon(
 
     update_data = payload.model_dump(exclude_unset=True)
 
-    if "location_id" in update_data:
+    if "location_id" in update_data and update_data["location_id"] is not None:
         location = db.query(Location).filter(Location.id == update_data["location_id"]).first()
         if not location:
             raise HTTPException(status_code=404, detail="Location not found")

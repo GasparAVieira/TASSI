@@ -1,7 +1,8 @@
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException, status
+from geoalchemy2.shape import from_shape, to_shape
+from shapely import wkt
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 from app.database import get_db
 from app.dependencies import require_admin
@@ -12,6 +13,22 @@ from app.schemas.building import BuildingCreate, BuildingResponse, BuildingUpdat
 router = APIRouter(prefix="/api/v1/buildings", tags=["Buildings"])
 
 
+def serialize_building(building: Building) -> BuildingResponse:
+    footprint_wkt = None
+    if building.footprint is not None:
+        footprint_wkt = to_shape(building.footprint).wkt
+
+    return BuildingResponse(
+        id=building.id,
+        code=building.code,
+        name=building.name,
+        description=building.description,
+        footprint_wkt=footprint_wkt,
+        created_at=building.created_at,
+        updated_at=building.updated_at,
+    )
+
+
 @router.post("/", response_model=BuildingResponse, status_code=status.HTTP_201_CREATED)
 def create_building(
     payload: BuildingCreate,
@@ -19,18 +36,30 @@ def create_building(
     current_user: User = Depends(require_admin),
 ):
     building = Building(
+        code=payload.code,
         name=payload.name,
         description=payload.description,
+        footprint=from_shape(wkt.loads(payload.footprint_wkt), srid=4326) if payload.footprint_wkt else None,
     )
+
     db.add(building)
     db.commit()
     db.refresh(building)
-    return building
+    return serialize_building(building)
 
 
 @router.get("/", response_model=list[BuildingResponse])
 def list_buildings(db: Session = Depends(get_db)):
-    return db.query(Building).all()
+    buildings = db.query(Building).all()
+    return [serialize_building(building) for building in buildings]
+
+
+@router.get("/{building_id}", response_model=BuildingResponse)
+def get_building(building_id: UUID, db: Session = Depends(get_db)):
+    building = db.query(Building).filter(Building.id == building_id).first()
+    if not building:
+        raise HTTPException(status_code=404, detail="Building not found")
+    return serialize_building(building)
 
 
 @router.patch("/{building_id}", response_model=BuildingResponse)
@@ -45,9 +74,18 @@ def update_building(
         raise HTTPException(status_code=404, detail="Building not found")
 
     update_data = payload.model_dump(exclude_unset=True)
+
+    if "footprint_wkt" in update_data:
+        building.footprint = (
+            from_shape(wkt.loads(update_data["footprint_wkt"]), srid=4326)
+            if update_data["footprint_wkt"]
+            else None
+        )
+        update_data.pop("footprint_wkt")
+
     for field, value in update_data.items():
         setattr(building, field, value)
 
     db.commit()
     db.refresh(building)
-    return building
+    return serialize_building(building)

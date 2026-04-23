@@ -10,6 +10,7 @@ from app.database import get_db
 from app.models.user import User
 
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
@@ -48,6 +49,34 @@ def get_current_user(
         )
 
     return user
+
+
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_security),
+    db: Session = Depends(get_db),
+) -> User | None:
+    if credentials is None:
+        return None
+
+    token = credentials.credentials
+
+    try:
+        payload = jwt.decode(
+            token,
+            settings.secret_key,
+            algorithms=[settings.algorithm],
+        )
+
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+
+        user_uuid = uuid.UUID(user_id)
+
+    except (JWTError, ValueError):
+        return None
+
+    return db.query(User).filter(User.id == user_uuid).first()
 
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:

@@ -5,11 +5,11 @@ from pydantic import BaseModel, ConfigDict
 
 
 class BeaconBase(BaseModel):
-    uuid: str
+    uuid: UUID
     major: int
     minor: int
     name: str | None = None
-    location_id: UUID
+    location_id: UUID | None = None
     battery_level: int | None = None
     last_seen: datetime | None = None
 
@@ -19,7 +19,7 @@ class BeaconCreate(BeaconBase):
 
 
 class BeaconUpdate(BaseModel):
-    uuid: str | None = None
+    uuid: UUID | None = None
     major: int | None = None
     minor: int | None = None
     name: str | None = None

@@ -1,27 +1,24 @@
 from datetime import datetime
 from decimal import Decimal
-from enum import Enum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-
-class LocationModelType(str, Enum):
-    gltf = "gltf"
-    glb = "glb"
-    obj = "obj"
-    fbx = "fbx"
-    usdz = "usdz"
+from app.core.enums import LocationType, ModelType
 
 
 class LocationBase(BaseModel):
+    building_id: UUID | None = None
+    type: LocationType
     name: str
-    floor: int
-    x: Decimal
-    y: Decimal
+    floor: int | None = None
+    geom_wkt: str
+    local_x: Decimal | None = None
+    local_y: Decimal | None = None
     description: str | None = None
+    is_accessible: bool = False
     model_url: str | None = None
-    model_type: LocationModelType | None = None
+    model_type: ModelType | None = None
 
 
 class LocationCreate(LocationBase):
@@ -29,17 +26,32 @@ class LocationCreate(LocationBase):
 
 
 class LocationUpdate(BaseModel):
+    building_id: UUID | None = None
+    type: LocationType | None = None
     name: str | None = None
     floor: int | None = None
-    x: Decimal | None = None
-    y: Decimal | None = None
+    geom_wkt: str | None = None
+    local_x: Decimal | None = None
+    local_y: Decimal | None = None
     description: str | None = None
+    is_accessible: bool | None = None
     model_url: str | None = None
-    model_type: LocationModelType | None = None
+    model_type: ModelType | None = None
 
 
-class LocationResponse(LocationBase):
+class LocationResponse(BaseModel):
     id: UUID
+    building_id: UUID | None = None
+    type: LocationType
+    name: str
+    floor: int | None = None
+    geom_wkt: str | None = None
+    local_x: Decimal | None = None
+    local_y: Decimal | None = None
+    description: str | None = None
+    is_accessible: bool
+    model_url: str | None = None
+    model_type: ModelType | None = None
     created_at: datetime
     updated_at: datetime
 

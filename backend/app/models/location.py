@@ -1,19 +1,12 @@
 import uuid
-from enum import Enum as PyEnum
 
-from sqlalchemy import DateTime, Enum, Numeric, SmallInteger, String, Text, func
+from geoalchemy2 import Geometry
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Numeric, SmallInteger, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.enums import LocationType, ModelType
 from app.database import Base
-
-
-class LocationModelType(str, PyEnum):
-    gltf = "gltf"
-    glb = "glb"
-    obj = "obj"
-    fbx = "fbx"
-    usdz = "usdz"
 
 
 class Location(Base):
@@ -24,24 +17,64 @@ class Location(Base):
         primary_key=True,
         default=uuid.uuid4,
     )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    floor: Mapped[int] = mapped_column(SmallInteger, nullable=False)
-    x: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    y: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    model_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    model_type: Mapped[LocationModelType | None] = mapped_column(
-        Enum(LocationModelType, name="location_model_type"),
+
+    building_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("buildings.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    type: Mapped[LocationType] = mapped_column(
+        Enum(LocationType, name="location_type_enum"),
+        nullable=False,
+        index=True,
+    )
+
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+
+    floor: Mapped[int | None] = mapped_column(
+        SmallInteger,
+        nullable=True,
+        index=True,
+    )
+
+    geom: Mapped[object] = mapped_column(
+        Geometry(geometry_type="POINT", srid=4326),
+        nullable=False,
+    )
+
+    local_x: Mapped[float | None] = mapped_column(
+        Numeric(10, 4),
         nullable=True,
     )
+    local_y: Mapped[float | None] = mapped_column(
+        Numeric(10, 4),
+        nullable=True,
+    )
+
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    is_accessible: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
+    model_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    model_type: Mapped[ModelType | None] = mapped_column(
+        Enum(ModelType, name="model_type_enum"),
+        nullable=True,
+    )
+
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
-        server_default=func.now(),
         nullable=False,
+        server_default=func.now(),
     )
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
+        nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
-        nullable=False,
     )

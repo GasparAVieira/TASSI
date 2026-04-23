@@ -1,8 +1,7 @@
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 from app.database import get_db
 from app.dependencies import require_admin
@@ -32,8 +31,15 @@ def create_path(
         from_location=payload.from_location,
         to_location=payload.to_location,
         distance=payload.distance,
+        weight_default=payload.weight_default,
+        weight_wheelchair=payload.weight_wheelchair,
+        weight_blind=payload.weight_blind,
         direction=payload.direction,
+        bearing=payload.bearing,
+        is_bidirectional=payload.is_bidirectional,
         is_accessible=payload.is_accessible,
+        instruction_pt=payload.instruction_pt,
+        instruction_en=payload.instruction_en,
     )
 
     db.add(path)
@@ -51,6 +57,14 @@ def create_path(
 @router.get("/", response_model=list[PathResponse])
 def list_paths(db: Session = Depends(get_db)):
     return db.query(Path).all()
+
+
+@router.get("/{path_id}", response_model=PathResponse)
+def get_path(path_id: UUID, db: Session = Depends(get_db)):
+    path = db.query(Path).filter(Path.id == path_id).first()
+    if not path:
+        raise HTTPException(status_code=404, detail="Path not found")
+    return path
 
 
 @router.patch("/{path_id}", response_model=PathResponse)

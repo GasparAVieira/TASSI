@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -7,12 +6,12 @@ from pydantic import BaseModel, ConfigDict
 
 class RoomBase(BaseModel):
     building_id: UUID
-    location_id: UUID | None = None
+    location_id: UUID
+    code: str
     name: str
     floor: int
     is_accessible: bool = False
-    x: Decimal | None = None
-    y: Decimal | None = None
+    capacity: int | None = None
 
 
 class RoomCreate(RoomBase):
@@ -22,15 +21,16 @@ class RoomCreate(RoomBase):
 class RoomUpdate(BaseModel):
     building_id: UUID | None = None
     location_id: UUID | None = None
+    code: str | None = None
     name: str | None = None
     floor: int | None = None
     is_accessible: bool | None = None
-    x: Decimal | None = None
-    y: Decimal | None = None
+    capacity: int | None = None
 
 
 class RoomResponse(RoomBase):
     id: UUID
     created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
