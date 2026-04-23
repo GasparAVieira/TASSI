@@ -190,8 +190,8 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
   void initState() {
     super.initState();
     _authService.addListener(_onAuthChanged);
+    _authService.loadSession();
   }
-
   @override
   bool get wantKeepAlive => true;
 
@@ -323,6 +323,7 @@ class _SettingsTabContent extends StatefulWidget {
 }
 
 class _SettingsTabContentState extends State<_SettingsTabContent> {
+  final AuthService _authService = AuthService();
   final SettingsService _settings = SettingsService();
   bool _notificationsEnabled = true;
   bool _wheelchairRoutesEnabled = false;
@@ -888,7 +889,10 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                   icon: Icons.logout,
                   textColor: theme.colorScheme.error,
                   iconColor: theme.colorScheme.error,
-                  onTap: () {},
+                  onTap: () async {
+                    await _authService.logout();
+                    if (mounted) setState(() {});
+                  }
                 ),
               ],
             ),
