@@ -9,4 +9,5 @@ from app.routers import (
     navigation,
     routes,
     route_steps,
+    diary_entries
 )

@@ -41,7 +41,6 @@ class LocationType(str, Enum):
     building_entrance = "building_entrance"
     corridor_node = "corridor_node"
     room_node = "room_node"
-    poi_node = "poi_node"
     stair_node = "stair_node"
     elevator_node = "elevator_node"
     outdoor_node = "outdoor_node"

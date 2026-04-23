@@ -2,9 +2,8 @@ from fastapi import FastAPI
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import auth, beacons, buildings, locations, navigation, paths, rooms, routes, route_steps, users
+from app.routers import auth, beacons, buildings, locations, navigation, paths, rooms, routes, route_steps, users, diary_entries
 import app.models
-from backend.app.routers import diary_entries
 
 
 Base.metadata.create_all(bind=engine)
