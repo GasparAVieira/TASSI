@@ -9,9 +9,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.2.1
-  shared_preferences: ^2.2.3
-  permission_handler: ^11.3.1
   flutter_localizations:
     sdk: flutter
   intl: any
@@ -21,6 +18,8 @@ dependencies:
   image_picker: ^1.2.1
   open_file: ^3.2.1
   video_thumbnail: ^0.5.6
+  http: ^1.6.0
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

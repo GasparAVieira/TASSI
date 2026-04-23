@@ -34,11 +34,11 @@ class LocationCard extends StatelessWidget {
             onTap: onToggle,
             leading: const FlutterLogo(size: 56.0),
             title: Text(
-              location.title,
+              location.name,
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             subtitle: Text(
-              location.subtitle,
+              location.type,
               style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             trailing: Row(
@@ -70,12 +70,24 @@ class LocationCard extends StatelessWidget {
             ),
           ),
           if (isExpanded) ...[
-            Image.network(
-              location.imageUrl,
-              width: double.infinity,
-              height: 180,
-              fit: BoxFit.cover,
-            ),
+            if (location.imageUrl != null && location.imageUrl!.isNotEmpty)
+              Image.network(
+                location.imageUrl!,
+                width: double.infinity,
+                height: 180,
+                fit: BoxFit.cover,
+              )
+            else
+              Container(
+                width: double.infinity,
+                height: 180,
+                color: theme.colorScheme.surfaceVariant,
+                child: Icon(
+                  Icons.location_on,
+                  size: 64,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -90,13 +102,13 @@ class LocationCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              location.title,
+                              location.name,
                               style: theme.textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              location.subtitle,
+                              location.type,
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -115,7 +127,7 @@ class LocationCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    location.description,
+                    location.description ?? 'No description available.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

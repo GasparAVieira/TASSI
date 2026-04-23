@@ -1,31 +1,35 @@
 class Location {
-  final String title;
-  final String subtitle;
-  final String description;
-  final String imageUrl;
+  final String id;
+  final String name;
+  final String type;
+  final String? description;
+  final String? imageUrl;
   final bool isWheelchairFriendly;
   bool isFavorite;
 
   Location({
-    required this.title,
-    required this.subtitle,
-    required this.description,
-    required this.imageUrl,
+    required this.id,
+    required this.name,
+    required this.type,
+    this.description,
+    this.imageUrl,
     this.isWheelchairFriendly = false,
     this.isFavorite = false,
   });
 
   Location copyWith({
-    String? title,
-    String? subtitle,
+    String? id,
+    String? name,
+    String? type,
     String? description,
     String? imageUrl,
     bool? isWheelchairFriendly,
     bool? isFavorite,
   }) {
     return Location(
-      title: title ?? this.title,
-      subtitle: subtitle ?? this.subtitle,
+      id: id ?? this.id,
+      name: name ?? this.name,
+      type: type ?? this.type,
       description: description ?? this.description,
       imageUrl: imageUrl ?? this.imageUrl,
       isWheelchairFriendly: isWheelchairFriendly ?? this.isWheelchairFriendly,
@@ -35,8 +39,9 @@ class Location {
 
   Map<String, dynamic> toJson() {
     return {
-      'title': title,
-      'subtitle': subtitle,
+      'id': id,
+      'name': name,
+      'type': type,
       'description': description,
       'imageUrl': imageUrl,
       'isWheelchairFriendly': isWheelchairFriendly,
@@ -46,11 +51,12 @@ class Location {
 
   factory Location.fromJson(Map<String, dynamic> json) {
     return Location(
-      title: json['title'] as String,
-      subtitle: json['subtitle'] as String,
-      description: json['description'] as String,
-      imageUrl: json['imageUrl'] as String,
-      isWheelchairFriendly: json['isWheelchairFriendly'] as bool? ?? false,
+      id: json['id']?.toString() ?? '',
+      name: json['name'] as String? ?? '',
+      type: json['type']?.toString() ?? '',
+      description: json['description'] as String?,
+      imageUrl: json['imageUrl'] as String? ?? json['model_url'] as String?,
+      isWheelchairFriendly: json['is_accessible'] as bool? ?? false,
       isFavorite: json['isFavorite'] as bool? ?? false,
     );
   }
