@@ -23,12 +23,12 @@ def resolve_profile(
 
 def select_weight(path: Path, profile: AccessibilityProfile) -> float | None:
     if profile in {AccessibilityProfile.wheelchair, AccessibilityProfile.wheelchair_biometric}:
-        return float(path.weight_wheelchair) if path.weight_wheelchair is not None else None
+        return float(path.weight_wheelchair or 0) #if path.weight_wheelchair is not None else None
 
     if profile in {AccessibilityProfile.blind, AccessibilityProfile.low_vision}:
-        return float(path.weight_blind) if path.weight_blind is not None else None
+        return float(path.weight_blind or 0) #if path.weight_blind is not None else None
 
-    return float(path.weight_default) if path.weight_default is not None else None
+    return float(path.weight_default or 0) #if path.weight_default is not None else None
 
 
 def select_instruction(path: Path, language: Language) -> str | None:
@@ -38,29 +38,30 @@ def select_instruction(path: Path, language: Language) -> str | None:
 
 
 def build_graph(paths: list[Path], profile: AccessibilityProfile):
-    graph: dict[UUID, list[tuple[UUID, float, Path]]] = defaultdict(list)
+    graph: dict[str, list[tuple[str, float, Path]]] = defaultdict(list)
 
     for path in paths:
         weight = select_weight(path, profile)
-        if weight is None:
-            continue
 
-        graph[path.from_location].append((path.to_location, weight, path))
+        from_id = str(path.from_location)
+        to_id = str(path.to_location)
 
-        if path.is_bidirectional:
-            graph[path.to_location].append((path.from_location, weight, path))
+        graph[from_id].append((to_id, weight, path))
 
     return graph
 
 
 def shortest_path(
-    graph: dict[UUID, list[tuple[UUID, float, Path]]],
+    graph: dict[str, list[tuple[str, float, Path]]],
     start: UUID,
     goal: UUID,
 ):
-    queue: list[tuple[float, UUID]] = [(0.0, start)]
-    costs: dict[UUID, float] = {start: 0.0}
-    previous: dict[UUID, tuple[UUID, Path]] = {}
+    start = str(start)
+    goal = str(goal)
+
+    queue: list[tuple[float, str]] = [(0.0, start)]
+    costs: dict[str, float] = {start: 0.0}
+    previous: dict[str, tuple[str, Path]] = {}
 
     while queue:
         current_cost, current_node = heapq.heappop(queue)
@@ -95,6 +96,8 @@ def shortest_path(
     ordered_paths.reverse()
     location_sequence.reverse()
 
+    location_sequence = [UUID(location_id) for location_id in location_sequence]
+
     return ordered_paths, location_sequence
 
 
@@ -112,6 +115,13 @@ def calculate_route(
     graph = build_graph(paths, profile)
 
     ordered_paths, location_sequence = shortest_path(graph, from_location_id, to_location_id)
+
+    print("FROM:", str(from_location_id))
+    print("TO:", str(to_location_id))
+    print("GRAPH KEYS:", list(graph.keys()))
+    print("START EDGES:", graph.get(str(from_location_id)))
+    print("TO EXISTS AS NODE:", str(to_location_id) in graph)
+    
     if ordered_paths is None:
         raise ValueError("No route found for the selected accessibility profile")
 
@@ -121,8 +131,8 @@ def calculate_route(
 
     for path in ordered_paths:
         weight = select_weight(path, profile)
-        distance = float(path.distance)
-        total_cost += 0.0 if weight is None else float(weight)
+        distance = float(path.distance or 0)
+        total_cost += weight
         total_distance += distance
 
         steps.append(
@@ -130,8 +140,8 @@ def calculate_route(
                 from_location_id=path.from_location,
                 to_location_id=path.to_location,
                 direction=path.direction,
-                distance=path.distance,
-                bearing=path.bearing,
+                distance=distance,
+                bearing=float(path.bearing or 0),
                 instruction=select_instruction(path, language),
                 is_accessible=path.is_accessible,
             )

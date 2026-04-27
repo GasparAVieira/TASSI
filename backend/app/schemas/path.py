@@ -10,8 +10,8 @@ from app.core.enums import Direction
 class PathBase(BaseModel):
     from_location: UUID
     to_location: UUID
-    distance: Decimal
-    weight_default: Decimal
+    distance: Decimal | None = None
+    weight_default: Decimal | None = None
     weight_wheelchair: Decimal | None = None
     weight_blind: Decimal | None = None
     direction: Direction
