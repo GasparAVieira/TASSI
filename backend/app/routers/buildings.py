@@ -35,31 +35,28 @@ def create_building(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    building = Building(
-        code=payload.code,
-        name=payload.name,
-        description=payload.description,
-        footprint=from_shape(wkt.loads(payload.footprint_wkt), srid=4326) if payload.footprint_wkt else None,
-    )
+    building = Building(**payload.model_dump())
 
     db.add(building)
     db.commit()
     db.refresh(building)
-    return serialize_building(building)
+
+    return building
 
 
 @router.get("/", response_model=list[BuildingResponse])
 def list_buildings(db: Session = Depends(get_db)):
-    buildings = db.query(Building).all()
-    return [serialize_building(building) for building in buildings]
+    return db.query(Building).all()
 
 
 @router.get("/{building_id}", response_model=BuildingResponse)
 def get_building(building_id: UUID, db: Session = Depends(get_db)):
     building = db.query(Building).filter(Building.id == building_id).first()
+
     if not building:
         raise HTTPException(status_code=404, detail="Building not found")
-    return serialize_building(building)
+
+    return building
 
 
 @router.patch("/{building_id}", response_model=BuildingResponse)
@@ -70,22 +67,16 @@ def update_building(
     current_user: User = Depends(require_admin),
 ):
     building = db.query(Building).filter(Building.id == building_id).first()
+
     if not building:
         raise HTTPException(status_code=404, detail="Building not found")
 
     update_data = payload.model_dump(exclude_unset=True)
-
-    if "footprint_wkt" in update_data:
-        building.footprint = (
-            from_shape(wkt.loads(update_data["footprint_wkt"]), srid=4326)
-            if update_data["footprint_wkt"]
-            else None
-        )
-        update_data.pop("footprint_wkt")
 
     for field, value in update_data.items():
         setattr(building, field, value)
 
     db.commit()
     db.refresh(building)
-    return serialize_building(building)
+
+    return building

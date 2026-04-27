@@ -1,6 +1,5 @@
 import uuid
 
-from geoalchemy2 import Geometry
 from sqlalchemy import DateTime, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -19,11 +18,6 @@ class Building(Base):
     code: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-    footprint: Mapped[object | None] = mapped_column(
-        Geometry(geometry_type="POLYGON", srid=4326),
-        nullable=True,
-    )
 
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),

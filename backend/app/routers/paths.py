@@ -27,20 +27,7 @@ def create_path(
     if not to_location:
         raise HTTPException(status_code=404, detail="To location not found")
 
-    path = Path(
-        from_location=payload.from_location,
-        to_location=payload.to_location,
-        distance=payload.distance,
-        weight_default=payload.weight_default,
-        weight_wheelchair=payload.weight_wheelchair,
-        weight_blind=payload.weight_blind,
-        direction=payload.direction,
-        bearing=payload.bearing,
-        is_bidirectional=payload.is_bidirectional,
-        is_accessible=payload.is_accessible,
-        instruction_pt=payload.instruction_pt,
-        instruction_en=payload.instruction_en,
-    )
+    path = Path(**payload.model_dump())
 
     db.add(path)
 
@@ -62,8 +49,10 @@ def list_paths(db: Session = Depends(get_db)):
 @router.get("/{path_id}", response_model=PathResponse)
 def get_path(path_id: UUID, db: Session = Depends(get_db)):
     path = db.query(Path).filter(Path.id == path_id).first()
+
     if not path:
         raise HTTPException(status_code=404, detail="Path not found")
+
     return path
 
 
@@ -75,6 +64,7 @@ def update_path(
     current_user: User = Depends(require_admin),
 ):
     path = db.query(Path).filter(Path.id == path_id).first()
+
     if not path:
         raise HTTPException(status_code=404, detail="Path not found")
 

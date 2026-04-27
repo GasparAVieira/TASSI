@@ -14,12 +14,8 @@ class DiaryEntryCreate(BaseModel):
     duration_sec: Optional[float] = None
     recorded_at: datetime
 
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-
     location_id: Optional[UUID] = None
     building_id: Optional[UUID] = None
-    beacon_id: Optional[UUID] = None
 
     context_notes: Optional[dict[str, Any]] = None
     is_synced: bool = True
@@ -32,12 +28,8 @@ class DiaryEntryUpdate(BaseModel):
     duration_sec: Optional[float] = None
     recorded_at: Optional[datetime] = None
 
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-
     location_id: Optional[UUID] = None
     building_id: Optional[UUID] = None
-    beacon_id: Optional[UUID] = None
 
     context_notes: Optional[dict[str, Any]] = None
     is_synced: Optional[bool] = None
@@ -46,14 +38,13 @@ class DiaryEntryUpdate(BaseModel):
 class DiaryEntryResponse(BaseModel):
     id: UUID
     participant_id: UUID
-    entry_type: str
+    entry_type: Literal["text", "audio", "image", "video"]
     body: Optional[str] = None
     duration_sec: Optional[float] = None
     recorded_at: datetime
 
     location_id: Optional[UUID] = None
     building_id: Optional[UUID] = None
-    beacon_id: Optional[UUID] = None
 
     context_notes: Optional[dict[str, Any]] = None
     is_synced: bool

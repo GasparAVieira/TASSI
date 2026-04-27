@@ -63,12 +63,6 @@ class Path(Base):
 
     bearing: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
 
-    is_bidirectional: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=False,
-    )
-
     is_accessible: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

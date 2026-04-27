@@ -8,7 +8,6 @@ class BuildingBase(BaseModel):
     code: str
     name: str
     description: str | None = None
-    footprint_wkt: str | None = None
 
 
 class BuildingCreate(BuildingBase):
@@ -19,15 +18,10 @@ class BuildingUpdate(BaseModel):
     code: str | None = None
     name: str | None = None
     description: str | None = None
-    footprint_wkt: str | None = None
 
 
-class BuildingResponse(BaseModel):
+class BuildingResponse(BuildingBase):
     id: UUID
-    code: str
-    name: str
-    description: str | None = None
-    footprint_wkt: str | None = None
     created_at: datetime
     updated_at: datetime
 

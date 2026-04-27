@@ -27,19 +27,12 @@ def create_room(
     if not location:
         raise HTTPException(status_code=404, detail="Location not found")
 
-    room = Room(
-        building_id=payload.building_id,
-        location_id=payload.location_id,
-        code=payload.code,
-        name=payload.name,
-        floor=payload.floor,
-        is_accessible=payload.is_accessible,
-        capacity=payload.capacity,
-    )
+    room = Room(**payload.model_dump())
 
     db.add(room)
     db.commit()
     db.refresh(room)
+
     return room
 
 
@@ -51,8 +44,10 @@ def list_rooms(db: Session = Depends(get_db)):
 @router.get("/{room_id}", response_model=RoomResponse)
 def get_room(room_id: UUID, db: Session = Depends(get_db)):
     room = db.query(Room).filter(Room.id == room_id).first()
+
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
+
     return room
 
 
@@ -64,6 +59,7 @@ def update_room(
     current_user: User = Depends(require_admin),
 ):
     room = db.query(Room).filter(Room.id == room_id).first()
+
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
@@ -84,4 +80,5 @@ def update_room(
 
     db.commit()
     db.refresh(room)
+
     return room

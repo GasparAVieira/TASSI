@@ -29,14 +29,18 @@ class PathCreate(PathBase):
 class PathUpdate(BaseModel):
     from_location: UUID | None = None
     to_location: UUID | None = None
+
     distance: Decimal | None = None
+
     weight_default: Decimal | None = None
     weight_wheelchair: Decimal | None = None
     weight_blind: Decimal | None = None
+
     direction: Direction | None = None
     bearing: Decimal | None = None
-    is_bidirectional: bool | None = None
+
     is_accessible: bool | None = None
+
     instruction_pt: str | None = None
     instruction_en: str | None = None
 

@@ -10,8 +10,6 @@ class RoomBase(BaseModel):
     code: str
     name: str
     floor: int
-    is_accessible: bool = False
-    capacity: int | None = None
 
 
 class RoomCreate(RoomBase):
@@ -24,8 +22,6 @@ class RoomUpdate(BaseModel):
     code: str | None = None
     name: str | None = None
     floor: int | None = None
-    is_accessible: bool | None = None
-    capacity: int | None = None
 
 
 class RoomResponse(RoomBase):

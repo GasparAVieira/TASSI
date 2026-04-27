@@ -40,17 +40,6 @@ class Room(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     floor: Mapped[int] = mapped_column(SmallInteger, nullable=False)
 
-    is_accessible: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=False,
-    )
-
-    capacity: Mapped[int | None] = mapped_column(
-        Integer,
-        nullable=True,
-    )
-
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
