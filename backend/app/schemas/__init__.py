@@ -1,4 +1,3 @@
-from app.schemas.beacon import BeaconCreate, BeaconResponse, BeaconUpdate
 from app.schemas.building import BuildingCreate, BuildingResponse, BuildingUpdate
 from app.schemas.location import LocationCreate, LocationResponse, LocationUpdate
 from app.schemas.navigation import NavigationRouteRequest, NavigationRouteResponse, NavigationStep
@@ -11,5 +10,3 @@ from app.schemas.user import (
     UserResponse,
     UserUpdate,
 )
-from app.schemas.route import RouteCreate, RouteResponse, RouteUpdate
-from app.schemas.route_step import RouteStepCreate, RouteStepResponse, RouteStepUpdate

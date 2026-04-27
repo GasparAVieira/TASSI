@@ -44,6 +44,7 @@ class LocationType(str, Enum):
     stair_node = "stair_node"
     elevator_node = "elevator_node"
     outdoor_node = "outdoor_node"
+    poi_node = "poi_node"
 
 
 class Direction(str, Enum):

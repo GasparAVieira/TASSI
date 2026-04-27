@@ -49,17 +49,17 @@ class Location(Base):
         nullable=True,
     )
 
-    beacon_uuid: Mapped[uuid.UUID | None] = mapped_column(
+    uuid: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         nullable=True,
     )
 
-    beacon_major: Mapped[int | None] = mapped_column(
+    major: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
 
-    beacon_minor: Mapped[int | None] = mapped_column(
+    minor: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
@@ -74,7 +74,7 @@ class Location(Base):
         nullable=True,
     )
 
-    beacon_battery_level: Mapped[int | None] = mapped_column(
+    battery_level: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )

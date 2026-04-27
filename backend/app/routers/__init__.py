@@ -4,10 +4,7 @@ from app.routers import (
     buildings,
     locations,
     rooms,
-    beacons,
     paths,
     navigation,
-    routes,
-    route_steps,
     diary_entries
 )
