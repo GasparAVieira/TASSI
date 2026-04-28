@@ -5,7 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from app.config import settings
+from app.core.config import settings
 from app.database import get_db
 from app.models.user import User
 
@@ -22,8 +22,8 @@ def get_current_user(
     try:
         payload = jwt.decode(
             token,
-            settings.secret_key,
-            algorithms=[settings.algorithm],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
         )
 
         user_id = payload.get("sub")
@@ -63,8 +63,8 @@ def get_current_user_optional(
     try:
         payload = jwt.decode(
             token,
-            settings.secret_key,
-            algorithms=[settings.algorithm],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
         )
 
         user_id = payload.get("sub")

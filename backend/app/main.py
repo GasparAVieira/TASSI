@@ -1,16 +1,16 @@
+import asyncio
 from fastapi import FastAPI
 
-from app.config import settings
+from app.core.config import settings
 from app.database import Base, engine
-from app.routers import auth, buildings, locations, navigation, paths, rooms, users, diary_entries
-import app.models
-
+from app.routers import auth, buildings, locations, navigation, paths, rooms, users, diary_entries, notifications, notification_socket
+from app.jobs.notification_scheduler import notification_scheduler_loop
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title=settings.app_name,
-    version=settings.app_version,
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
 )
 
 
@@ -27,3 +27,5 @@ app.include_router(rooms.router)
 app.include_router(paths.router)
 app.include_router(navigation.router)
 app.include_router(diary_entries.router)
+app.include_router(notifications.router)
+app.include_router(notification_socket.router)
