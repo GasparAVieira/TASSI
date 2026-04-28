@@ -27,6 +27,7 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
   final SettingsService _settings = SettingsService();
   final DiaryService _diaryService = DiaryService();
   final bool _isAttachmentProcessing = false;
+  bool _isLoadingEntries = true;
 
   List<DiaryEntry> _allEntries = [];
 
@@ -46,11 +47,24 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
   }
 
   Future<void> _loadDiaryEntries() async {
-    final entries = await _diaryService.fetchEntries();
     if (!mounted) return;
     setState(() {
-      _allEntries = entries;
+      _isLoadingEntries = true;
     });
+
+    try {
+      final entries = await _diaryService.fetchEntries();
+      if (!mounted) return;
+      setState(() {
+        _allEntries = entries;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingEntries = false;
+        });
+      }
+    }
   }
 
   void _showMediaChoice(String type) {
@@ -384,6 +398,7 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
                           fabKey: _fabKey,
                           newEntryKey: _newEntryKey,
                         ),
+                  elevation: 2,
                   backgroundColor: theme.colorScheme.primary,
                   foregroundColor: theme.colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
@@ -764,6 +779,16 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
                         _privacyFilter = null;
                       });
                     },
+                  ),
+                )
+              else if (_isLoadingEntries)
+                Expanded(
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation(
+                        theme.colorScheme.primary,
+                      ),
+                    ),
                   ),
                 )
               else

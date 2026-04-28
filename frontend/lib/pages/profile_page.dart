@@ -15,7 +15,9 @@ import '../widgets/faq_widgets.dart';
 import '../widgets/gdpr_widgets.dart';
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
+  final int initialTabIndex;
+
+  const ProfilePage({super.key, this.initialTabIndex = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +27,7 @@ class ProfilePage extends StatelessWidget {
 
     return DefaultTabController(
       length: 4,
+      initialIndex: initialTabIndex,
       child: SafeArea(
         child: Container(
           width: double.infinity,
@@ -196,16 +199,27 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
   final AuthService _authService = AuthService();
   bool _isEditingProfile = false;
   bool _isSavingProfile = false;
+  bool _isProfileLoading = true;
 
   @override
   void initState() {
     super.initState();
     _authService.addListener(_onAuthChanged);
-    _authService.loadSession();
+    _loadProfileData();
   }
 
   @override
   bool get wantKeepAlive => true;
+
+  Future<void> _loadProfileData() async {
+    await _authService.loadSession();
+    if (!mounted) return;
+    await _syncProfileControllers();
+    if (!mounted) return;
+    setState(() {
+      _isProfileLoading = false;
+    });
+  }
 
   @override
   void dispose() {
@@ -223,7 +237,12 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
   void _onAuthChanged() {
     if (!mounted) return;
     if (_authService.isLoggedIn) {
-      _syncProfileControllers();
+      _syncProfileControllers().whenComplete(() {
+        if (!mounted) return;
+        setState(() {
+          _isProfileLoading = false;
+        });
+      });
     } else {
       _profileNameController.clear();
       _profilePhoneController.clear();
@@ -231,7 +250,9 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
       _profilePhoneDisplay = 'Not set yet';
       _profilePhoneNumber = PhoneNumber(isoCode: 'PT');
       _profileRawPhoneNumber = '';
-      setState(() {});
+      setState(() {
+        _isProfileLoading = false;
+      });
     }
   }
 
@@ -369,6 +390,7 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
           ),
           const SizedBox(height: 10),
           ProfileDetailsCard(
+            isLoading: _isProfileLoading,
             isEditing: _isEditingProfile,
             isSaving: _isSavingProfile,
             nameController: _profileNameController,
@@ -377,29 +399,29 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
             phoneNumber: _profilePhoneNumber,
             phoneDisplayValue: _profilePhoneDisplay,
             onPhoneNumberChanged: (PhoneNumber phoneNumber) {
-              _profilePhoneNumber = phoneNumber;
-              _profileRawPhoneNumber = phoneNumber.phoneNumber ?? '';
-              final originalDialCode = phoneNumber.dialCode?.trim() ?? '';
-              final dialCode = originalDialCode.startsWith('+')
-                  ? originalDialCode
-                  : (originalDialCode.isNotEmpty ? '+$originalDialCode' : '');
-              final numberPart = phoneNumber.phoneNumber?.trim() ?? '';
-              final formattedNumber = dialCode.isNotEmpty
-                  ? numberPart.startsWith(dialCode)
-                      ? numberPart.substring(dialCode.length).trimLeft()
-                      : numberPart.startsWith(originalDialCode)
-                          ? numberPart.substring(originalDialCode.length).trimLeft()
-                          : numberPart.startsWith('+$originalDialCode')
-                              ? numberPart.substring(originalDialCode.length + 1).trimLeft()
-                              : numberPart
-                  : numberPart;
-              _profilePhoneDisplay = dialCode.isNotEmpty
-                  ? '$dialCode $formattedNumber'
-                  : formattedNumber;
-            },
-            onToggleEditing: _toggleProfileEditing,
-            onCancelEditing: _cancelProfileEdits,
-          ),
+                _profilePhoneNumber = phoneNumber;
+                _profileRawPhoneNumber = phoneNumber.phoneNumber ?? '';
+                final originalDialCode = phoneNumber.dialCode?.trim() ?? '';
+                final dialCode = originalDialCode.startsWith('+')
+                    ? originalDialCode
+                    : (originalDialCode.isNotEmpty ? '+$originalDialCode' : '');
+                final numberPart = phoneNumber.phoneNumber?.trim() ?? '';
+                final formattedNumber = dialCode.isNotEmpty
+                    ? numberPart.startsWith(dialCode)
+                        ? numberPart.substring(dialCode.length).trimLeft()
+                        : numberPart.startsWith(originalDialCode)
+                            ? numberPart.substring(originalDialCode.length).trimLeft()
+                            : numberPart.startsWith('+$originalDialCode')
+                                ? numberPart.substring(originalDialCode.length + 1).trimLeft()
+                                : numberPart
+                    : numberPart;
+                _profilePhoneDisplay = dialCode.isNotEmpty
+                    ? '$dialCode $formattedNumber'
+                    : formattedNumber;
+              },
+              onToggleEditing: _toggleProfileEditing,
+              onCancelEditing: _cancelProfileEdits,
+            ),
         ],
       ),
     );
@@ -1028,14 +1050,36 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                     context,
                     title: l10n.changeEmail,
                     icon: Icons.email_outlined,
-                    onTap: () {},
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.changeEmailNotification),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          margin: const EdgeInsets.all(10),
+                        ),
+                      );
+                    },
                   ),
                   const Divider(height: 1),
                   _buildActionTile(
                     context,
                     title: l10n.resetPassword,
                     icon: Icons.lock_reset_outlined,
-                    onTap: () {},
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.resetPasswordNotification),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          margin: const EdgeInsets.all(10),
+                        ),
+                      );
+                    },
                   ),
                   const Divider(height: 1),
                   _buildActionTile(
@@ -1157,8 +1201,8 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
     if (!opened) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Unable to open app settings.'),
+        const SnackBar(
+          content: Text('Unable to open app settings.'),
           behavior: SnackBarBehavior.floating,
         ),
       );

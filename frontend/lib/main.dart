@@ -276,6 +276,14 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int currentPageIndex = 0;
+  int profileInitialTabIndex = 0;
+
+  void _openSettings() {
+    setState(() {
+      currentPageIndex = 3; // Profile page index
+      profileInitialTabIndex = 1; // Settings tab index
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -296,6 +304,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           onDestinationSelected: (int index) {
             setState(() {
               currentPageIndex = index;
+              if (index != 3) {
+                profileInitialTabIndex = 0;
+              }
             });
           },
           selectedIndex: currentPageIndex,
@@ -323,10 +334,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ],
         ),
         body: <Widget>[
-          const MapPage(),
+          MapPage(onOpenSettings: _openSettings),
           const GoToPage(),
           const DiaryPage(),
-          const ProfilePage(),
+          ProfilePage(initialTabIndex: profileInitialTabIndex),
         ][currentPageIndex],
       ),
     );

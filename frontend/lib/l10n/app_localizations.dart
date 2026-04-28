@@ -356,11 +356,23 @@ abstract class AppLocalizations {
   /// **'Change Email'**
   String get changeEmail;
 
+  /// No description provided for @changeEmailNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Email change request sent.'**
+  String get changeEmailNotification;
+
   /// No description provided for @resetPassword.
   ///
   /// In en, this message translates to:
   /// **'Reset Password'**
   String get resetPassword;
+
+  /// No description provided for @resetPasswordNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Password reset request sent.'**
+  String get resetPasswordNotification;
 
   /// No description provided for @logOut.
   ///

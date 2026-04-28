@@ -303,6 +303,7 @@ class ProfileStatsCard extends StatelessWidget {
 }
 
 class ProfileDetailsCard extends StatelessWidget {
+  final bool isLoading;
   final bool isEditing;
   final bool isSaving;
   final TextEditingController nameController;
@@ -316,6 +317,7 @@ class ProfileDetailsCard extends StatelessWidget {
 
   const ProfileDetailsCard({
     super.key,
+    required this.isLoading,
     required this.isEditing,
     required this.isSaving,
     required this.nameController,
@@ -381,33 +383,51 @@ class ProfileDetailsCard extends StatelessWidget {
                             ),
                           ],
                         )
-                else
-                  isSaving
-                      ? SizedBox(
-                          height: 36,
-                          child: Center(
-                            child: SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                        )
-                      : SizedBox(
-                          height: 36,
-                          child: FilledButton(
-                            onPressed: onToggleEditing,
-                            child: const Text('Edit'),
+                else if (isLoading)
+                  SizedBox(
+                    height: 36,
+                    child: Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(
+                            theme.colorScheme.primary,
                           ),
                         ),
+                      ),
+                    ),
+                  )
+                else if (isSaving)
+                  SizedBox(
+                    height: 36,
+                    child: Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: 36,
+                    child: FilledButton(
+                      onPressed: onToggleEditing,
+                      child: const Text('Edit'),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 14),
-            _buildProfileField(context, 'Full Name', nameController),
-            const SizedBox(height: 12),
-            _buildPhoneField(context),
-            const SizedBox(height: 12),
-            _buildProfileField(context, 'Biography', bioController, maxLines: 4),
+            if (!isLoading) ...[
+              _buildProfileField(context, 'Full Name', nameController),
+              const SizedBox(height: 12),
+              _buildPhoneField(context),
+              const SizedBox(height: 12),
+              _buildProfileField(context, 'Biography', bioController, maxLines: 4),
+            ],
           ],
         ),
       ),

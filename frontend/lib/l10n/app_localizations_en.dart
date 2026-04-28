@@ -142,7 +142,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changeEmail => 'Change Email';
 
   @override
+  String get changeEmailNotification => 'Email change request sent.';
+
+  @override
   String get resetPassword => 'Reset Password';
+
+  @override
+  String get resetPasswordNotification => 'Password reset request sent.';
 
   @override
   String get logOut => 'Log Out';

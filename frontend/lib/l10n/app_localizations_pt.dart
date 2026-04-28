@@ -21,7 +21,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get faq => 'FAQ';
 
   @override
-  String get gdpr => 'GDPR';
+  String get gdpr => 'RGPD';
 
   @override
   String get general => 'Geral';
@@ -142,7 +142,14 @@ class AppLocalizationsPt extends AppLocalizations {
   String get changeEmail => 'Alterar Email';
 
   @override
+  String get changeEmailNotification => 'Pedido de alteração de email enviado.';
+
+  @override
   String get resetPassword => 'Redefinir Senha';
+
+  @override
+  String get resetPasswordNotification =>
+      'Pedido de redefinição de senha enviado.';
 
   @override
   String get logOut => 'Sair';
