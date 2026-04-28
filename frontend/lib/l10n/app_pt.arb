@@ -64,6 +64,8 @@
   "gdprCompliant": " (Conforme RGPD)",
   "signUp": "Registar",
   "alreadyHaveAccount": "Já tem uma conta?",
+  "continueWithoutAccount": "Continuar sem conta",
+  "continueWithoutAccountHint": "Pode continuar sem uma conta, mas a experiência será diferente.",
   "resetPasswordTitle": "Redefinir Senha",
   "resetPasswordSubtitle": "Introduza o seu email para receber instruções de recuperação.",
   "sendRecoveryLink": "Enviar Link de Recuperação",
@@ -74,6 +76,7 @@
   "passwordLength": "A senha deve ter pelo menos 8 caracteres.",
   "passwordsDoNotMatch": "As senhas não coincidem.",
   "selectLanguage": "Selecionar Idioma",
+  "previousLanguage": "Anterior",
   "cancel": "Cancelar",
   "recoveryLinkSent": "Link de recuperação enviado para {email}",
   "@recoveryLinkSent": {

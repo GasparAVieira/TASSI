@@ -64,6 +64,8 @@
   "gdprCompliant": " (GDPR Compliant)",
   "signUp": "Sign Up",
   "alreadyHaveAccount": "Already Have an Account",
+  "continueWithoutAccount": "Continue without account",
+  "continueWithoutAccountHint": "You can continue without an account, but the experience will be different.",
   "resetPasswordTitle": "Reset Password",
   "resetPasswordSubtitle": "Enter your email to receive recovery instructions.",
   "sendRecoveryLink": "Send Recovery Link",
@@ -74,6 +76,7 @@
   "passwordLength": "Password must be at least 8 characters.",
   "passwordsDoNotMatch": "Passwords do not match.",
   "selectLanguage": "Select Language",
+  "previousLanguage": "Previous",
   "cancel": "Cancel",
   "recoveryLinkSent": "Recovery link sent to {email}",
   "@recoveryLinkSent": {

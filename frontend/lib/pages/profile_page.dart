@@ -1,13 +1,16 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../main.dart';
 import '../services/auth_service.dart';
+import '../models/accessibility_profile.dart';
 import '../services/settings_service.dart';
 import '../widgets/auth_widgets.dart';
+import '../widgets/profile_widgets.dart';
 import '../widgets/faq_widgets.dart';
 import '../widgets/gdpr_widgets.dart';
 
@@ -184,7 +187,15 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _profileNameController = TextEditingController();
+  final _profilePhoneController = TextEditingController();
+  final _profileBioController = TextEditingController();
+  PhoneNumber _profilePhoneNumber = PhoneNumber(isoCode: 'PT');
+  String _profileRawPhoneNumber = '';
+  String _profilePhoneDisplay = 'Not set yet';
   final AuthService _authService = AuthService();
+  bool _isEditingProfile = false;
+  bool _isSavingProfile = false;
 
   @override
   void initState() {
@@ -192,6 +203,7 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
     _authService.addListener(_onAuthChanged);
     _authService.loadSession();
   }
+
   @override
   bool get wantKeepAlive => true;
 
@@ -202,11 +214,117 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _profileNameController.dispose();
+    _profilePhoneController.dispose();
+    _profileBioController.dispose();
     super.dispose();
   }
 
   void _onAuthChanged() {
+    if (!mounted) return;
+    if (_authService.isLoggedIn) {
+      _syncProfileControllers();
+    } else {
+      _profileNameController.clear();
+      _profilePhoneController.clear();
+      _profileBioController.clear();
+      _profilePhoneDisplay = 'Not set yet';
+      _profilePhoneNumber = PhoneNumber(isoCode: 'PT');
+      _profileRawPhoneNumber = '';
+      setState(() {});
+    }
+  }
+
+  Future<void> _syncProfileControllers() async {
+    if (!_authService.isLoggedIn) {
+      setState(() {});
+      return;
+    }
+
+    _profileNameController.text = _authService.userName ?? '';
+    _profileBioController.text = _authService.bio ?? '';
+    _profileRawPhoneNumber = _authService.phone?.trim() ?? '';
+
+    if (_profileRawPhoneNumber.isNotEmpty) {
+      try {
+        final parsed = await PhoneNumber.getRegionInfoFromPhoneNumber(
+          _profileRawPhoneNumber,
+          'PT',
+        );
+        _profilePhoneNumber = parsed;
+        _profilePhoneController.text = parsed.phoneNumber ?? _profileRawPhoneNumber;
+        if (parsed.dialCode != null && parsed.dialCode!.trim().isNotEmpty) {
+          final originalDialCode = parsed.dialCode!.trim();
+          final dialCode = originalDialCode.startsWith('+')
+              ? originalDialCode
+              : '+$originalDialCode';
+          final numberPart = parsed.phoneNumber?.trim() ?? _profileRawPhoneNumber;
+          final national = numberPart.startsWith(dialCode)
+              ? numberPart.substring(dialCode.length).trimLeft()
+              : numberPart.startsWith(originalDialCode)
+                  ? numberPart.substring(originalDialCode.length).trimLeft()
+                  : numberPart.startsWith('+$originalDialCode')
+                      ? numberPart.substring(originalDialCode.length + 1).trimLeft()
+                      : numberPart;
+          _profilePhoneDisplay = '$dialCode $national';
+        } else {
+          _profilePhoneDisplay = parsed.phoneNumber ?? _profileRawPhoneNumber;
+        }
+      } catch (_) {
+        _profilePhoneNumber = PhoneNumber(isoCode: 'PT');
+        _profilePhoneController.text = '';
+        _profilePhoneDisplay = 'Could not retrieve a valid phone number';
+      }
+    } else {
+      _profilePhoneNumber = PhoneNumber(isoCode: 'PT');
+      _profilePhoneController.text = '';
+      _profilePhoneDisplay = 'Not set yet';
+    }
+
     if (mounted) setState(() {});
+  }
+
+  Future<void> _saveProfileEdits() async {
+    final rawPhone = _profileRawPhoneNumber.trim();
+
+    await _authService.updateLocalProfile(
+      fullName: _profileNameController.text.trim(),
+      phone: rawPhone,
+      bio: _profileBioController.text.trim(),
+    );
+    await _syncProfileControllers();
+  }
+
+  void _cancelProfileEdits() {
+    _syncProfileControllers();
+    setState(() {
+      _isEditingProfile = false;
+    });
+  }
+
+  Future<void> _toggleProfileEditing() async {
+    if (_isEditingProfile) {
+      setState(() {
+        _isSavingProfile = true;
+      });
+      try {
+        await _saveProfileEdits();
+        setState(() {
+          _isEditingProfile = false;
+        });
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isSavingProfile = false;
+          });
+        }
+      }
+      return;
+    }
+
+    setState(() {
+      _isEditingProfile = true;
+    });
   }
 
   void _setView(_AuthView view) {
@@ -230,37 +348,59 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
   }
 
   Widget _buildLoggedInCard() {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Card(
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        color: theme.colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Text(l10n.welcomeBack, style: theme.textTheme.titleLarge),
-              const SizedBox(height: 8),
-              Text(
-                _authService.userName ?? _authService.userEmail ?? '',
-                style: theme.textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: () async {
-                  await _authService.logout();
-                  _setView(_AuthView.login);
-                },
-                child: Text(l10n.logOut),
-              ),
-            ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ProfileHeaderCard(
+            name: _authService.userName ?? _authService.userEmail ?? '',
+            role: _authService.role ?? 'user',
+            onLogoutConfirm: () async {
+              await _authService.logout();
+              _setView(_AuthView.login);
+            },
           ),
-        ),
+          const SizedBox(height: 10),
+          ProfileStatsCard(
+            email: _authService.userEmail ?? 'Not available',
+            accessibilityProfile:
+                _authService.accessibilityProfile ?? AccessibilityProfile.None,
+          ),
+          const SizedBox(height: 10),
+          ProfileDetailsCard(
+            isEditing: _isEditingProfile,
+            isSaving: _isSavingProfile,
+            nameController: _profileNameController,
+            phoneController: _profilePhoneController,
+            bioController: _profileBioController,
+            phoneNumber: _profilePhoneNumber,
+            phoneDisplayValue: _profilePhoneDisplay,
+            onPhoneNumberChanged: (PhoneNumber phoneNumber) {
+              _profilePhoneNumber = phoneNumber;
+              _profileRawPhoneNumber = phoneNumber.phoneNumber ?? '';
+              final originalDialCode = phoneNumber.dialCode?.trim() ?? '';
+              final dialCode = originalDialCode.startsWith('+')
+                  ? originalDialCode
+                  : (originalDialCode.isNotEmpty ? '+$originalDialCode' : '');
+              final numberPart = phoneNumber.phoneNumber?.trim() ?? '';
+              final formattedNumber = dialCode.isNotEmpty
+                  ? numberPart.startsWith(dialCode)
+                      ? numberPart.substring(dialCode.length).trimLeft()
+                      : numberPart.startsWith(originalDialCode)
+                          ? numberPart.substring(originalDialCode.length).trimLeft()
+                          : numberPart.startsWith('+$originalDialCode')
+                              ? numberPart.substring(originalDialCode.length + 1).trimLeft()
+                              : numberPart
+                  : numberPart;
+              _profilePhoneDisplay = dialCode.isNotEmpty
+                  ? '$dialCode $formattedNumber'
+                  : formattedNumber;
+            },
+            onToggleEditing: _toggleProfileEditing,
+            onCancelEditing: _cancelProfileEdits,
+          ),
+        ],
       ),
     );
   }
@@ -325,12 +465,6 @@ class _SettingsTabContent extends StatefulWidget {
 class _SettingsTabContentState extends State<_SettingsTabContent> {
   final AuthService _authService = AuthService();
   final SettingsService _settings = SettingsService();
-  bool _notificationsEnabled = true;
-  bool _wheelchairRoutesEnabled = false;
-  bool _audioFeedbackEnabled = true;
-  bool _audioNavigationEnabled = false;
-  double _audioSpeechRate = 1.0;
-  bool _hapticFeedbackEnabled = true;
   PermissionStatus _cameraPermissionStatus = PermissionStatus.denied;
   PermissionStatus _microphonePermissionStatus = PermissionStatus.denied;
   PermissionStatus _galleryPermissionStatus = PermissionStatus.denied;
@@ -395,10 +529,17 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                           context,
                           title: 'English',
                           subtitle: 'EN',
+                          previousLanguageLabel: 'Previous',
                           isSelected: currentLocale.languageCode == 'en',
                           isInitial: initialLocale.languageCode == 'en',
-                          onTap: () {
-                            MyApp.setLocale(context, const Locale('en'));
+                          onTap: () async {
+                            final currentContext = context;
+                            await _settings.setPreferredLanguageCode('en');
+                            if (_authService.isLoggedIn) {
+                              await _authService.setPreferredLanguageCode('en');
+                            }
+                            if (!currentContext.mounted) return;
+                            MyApp.setLocale(currentContext, const Locale('en'));
                             setModalState(() {});
                           },
                         ),
@@ -406,10 +547,17 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                           context,
                           title: 'Português',
                           subtitle: 'PT',
+                          previousLanguageLabel: 'Anterior',
                           isSelected: currentLocale.languageCode == 'pt',
                           isInitial: initialLocale.languageCode == 'pt',
-                          onTap: () {
-                            MyApp.setLocale(context, const Locale('pt'));
+                          onTap: () async {
+                            final currentContext = context;
+                            await _settings.setPreferredLanguageCode('pt');
+                            if (_authService.isLoggedIn) {
+                              await _authService.setPreferredLanguageCode('pt');
+                            }
+                            if (!currentContext.mounted) return;
+                            MyApp.setLocale(currentContext, const Locale('pt'));
                             setModalState(() {});
                           },
                         ),
@@ -603,12 +751,14 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
     BuildContext context, {
     required String title,
     String? subtitle,
+    String? previousLanguageLabel,
     IconData? icon,
     required bool isSelected,
     required bool isInitial,
     required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final color = isSelected
         ? theme.colorScheme.primary
         : theme.colorScheme.onSurface;
@@ -653,7 +803,7 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                'PREVIOUS',
+                previousLanguageLabel ?? l10n.previousLanguage,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.onSecondaryContainer,
                   fontWeight: FontWeight.bold,
@@ -700,6 +850,7 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // General section
             _buildSectionHeader(theme, l10n.general),
             _buildSettingsCard(
               theme,
@@ -709,9 +860,9 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                   title: l10n.pushNotifications,
                   subtitle: l10n.pushNotificationsSubtitle,
                   icon: Icons.notifications_active_outlined,
-                  value: _notificationsEnabled,
+                  value: _settings.pushNotificationsEnabled,
                   onChanged: (val) =>
-                      setState(() => _notificationsEnabled = val),
+                      _settings.setPushNotificationsEnabled(val),
                 ),
                 const Divider(height: 1),
                 _buildActionTile(
@@ -756,6 +907,7 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
               ],
             ),
             const SizedBox(height: 20),
+            // Mobility section
             _buildSectionHeader(theme, l10n.mobility),
             _buildSettingsCard(
               theme,
@@ -765,9 +917,9 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                   title: l10n.wheelchairRoutes,
                   subtitle: l10n.wheelchairRoutesSubtitle,
                   icon: Icons.accessible_forward_outlined,
-                  value: _wheelchairRoutesEnabled,
+                  value: _settings.wheelchairRoutesEnabled,
                   onChanged: (val) =>
-                      setState(() => _wheelchairRoutesEnabled = val),
+                      _settings.setWheelchairRoutesEnabled(val),
                 ),
                 const Divider(height: 1),
                 _buildActionTile(
@@ -780,6 +932,7 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
               ],
             ),
             const SizedBox(height: 20),
+            // Navigation audio section
             _buildSectionHeader(theme, l10n.navigationAudio),
             _buildSettingsCard(
               theme,
@@ -789,9 +942,9 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                   title: l10n.audioFeedback,
                   subtitle: l10n.audioFeedbackSubtitle,
                   icon: Icons.volume_up_outlined,
-                  value: _audioFeedbackEnabled,
+                  value: _settings.audioFeedbackEnabled,
                   onChanged: (val) =>
-                      setState(() => _audioFeedbackEnabled = val),
+                      _settings.setAudioFeedbackEnabled(val),
                 ),
                 const Divider(height: 1),
                 _buildSwitchTile(
@@ -799,22 +952,23 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                   title: l10n.audioNavigation,
                   subtitle: l10n.audioNavigationSubtitle,
                   icon: Icons.record_voice_over_outlined,
-                  value: _audioNavigationEnabled,
+                  value: _settings.audioNavigationEnabled,
                   onChanged: (val) =>
-                      setState(() => _audioNavigationEnabled = val),
+                      _settings.setAudioNavigationEnabled(val),
                 ),
-                if (_audioNavigationEnabled) ...[
+                if (_settings.audioNavigationEnabled) ...[
                   const Divider(height: 1),
                   _buildSliderTile(
                     context,
                     title: l10n.speechRate,
-                    value: _audioSpeechRate,
-                    onChanged: (val) => setState(() => _audioSpeechRate = val),
+                    value: _settings.audioSpeechRate,
+                    onChanged: (val) => _settings.setAudioSpeechRate(val),
                   ),
                 ],
               ],
             ),
             const SizedBox(height: 20),
+            // Accessibility section
             _buildSectionHeader(theme, l10n.accessibility),
             _buildSettingsCard(
               theme,
@@ -824,9 +978,8 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                   title: l10n.hapticFeedback,
                   subtitle: l10n.hapticFeedbackSubtitle,
                   icon: Icons.vibration,
-                  value: _hapticFeedbackEnabled,
-                  onChanged: (val) =>
-                      setState(() => _hapticFeedbackEnabled = val),
+                  value: _settings.hapticFeedbackEnabled,
+                  onChanged: (val) => _settings.setHapticFeedbackEnabled(val),
                 ),
                 const Divider(height: 1),
                 _buildSwitchTile(
@@ -865,38 +1018,41 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
               ],
             ),
             const SizedBox(height: 20),
-            _buildSectionHeader(theme, l10n.account),
-            _buildSettingsCard(
-              theme,
-              children: [
-                _buildActionTile(
-                  context,
-                  title: l10n.changeEmail,
-                  icon: Icons.email_outlined,
-                  onTap: () {},
-                ),
-                const Divider(height: 1),
-                _buildActionTile(
-                  context,
-                  title: l10n.resetPassword,
-                  icon: Icons.lock_reset_outlined,
-                  onTap: () {},
-                ),
-                const Divider(height: 1),
-                _buildActionTile(
-                  context,
-                  title: l10n.logOut,
-                  icon: Icons.logout,
-                  textColor: theme.colorScheme.error,
-                  iconColor: theme.colorScheme.error,
-                  onTap: () async {
-                    await _authService.logout();
-                    if (mounted) setState(() {});
-                  }
-                ),
-              ],
-            ),
-            const SizedBox(height: 30),
+            if (_authService.isLoggedIn) ...[
+              // Account section
+              _buildSectionHeader(theme, l10n.account),
+              _buildSettingsCard(
+                theme,
+                children: [
+                  _buildActionTile(
+                    context,
+                    title: l10n.changeEmail,
+                    icon: Icons.email_outlined,
+                    onTap: () {},
+                  ),
+                  const Divider(height: 1),
+                  _buildActionTile(
+                    context,
+                    title: l10n.resetPassword,
+                    icon: Icons.lock_reset_outlined,
+                    onTap: () {},
+                  ),
+                  const Divider(height: 1),
+                  _buildActionTile(
+                    context,
+                    title: l10n.logOut,
+                    icon: Icons.logout,
+                    textColor: theme.colorScheme.error,
+                    iconColor: theme.colorScheme.error,
+                    onTap: () async {
+                      await _authService.logout();
+                      if (mounted) setState(() {});
+                    }
+                  ),
+                ],
+              ),
+              const SizedBox(height: 30),
+            ],
           ],
         ),
       ),

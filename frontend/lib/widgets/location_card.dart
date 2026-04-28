@@ -81,7 +81,7 @@ class LocationCard extends StatelessWidget {
               Container(
                 width: double.infinity,
                 height: 180,
-                color: theme.colorScheme.surfaceVariant,
+                color: theme.colorScheme.surfaceContainerHighest,
                 child: Icon(
                   Icons.location_on,
                   size: 64,

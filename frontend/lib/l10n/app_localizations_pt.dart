@@ -208,6 +208,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get alreadyHaveAccount => 'Já tem uma conta?';
 
   @override
+  String get continueWithoutAccount => 'Continuar sem conta';
+
+  @override
+  String get continueWithoutAccountHint =>
+      'Pode continuar sem uma conta, mas a experiência será diferente.';
+
+  @override
   String get resetPasswordTitle => 'Redefinir Senha';
 
   @override
@@ -238,6 +245,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get selectLanguage => 'Selecionar Idioma';
+
+  @override
+  String get previousLanguage => 'Anterior';
 
   @override
   String get cancel => 'Cancelar';

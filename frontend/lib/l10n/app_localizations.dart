@@ -488,6 +488,18 @@ abstract class AppLocalizations {
   /// **'Already Have an Account'**
   String get alreadyHaveAccount;
 
+  /// No description provided for @continueWithoutAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue without account'**
+  String get continueWithoutAccount;
+
+  /// No description provided for @continueWithoutAccountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can continue without an account, but the experience will be different.'**
+  String get continueWithoutAccountHint;
+
   /// No description provided for @resetPasswordTitle.
   ///
   /// In en, this message translates to:
@@ -547,6 +559,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select Language'**
   String get selectLanguage;
+
+  /// No description provided for @previousLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get previousLanguage;
 
   /// No description provided for @cancel.
   ///

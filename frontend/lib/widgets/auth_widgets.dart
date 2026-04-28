@@ -181,7 +181,16 @@ class _LoginCardState extends State<LoginCard> {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: _isSubmitting ? null : _onLoginPressed,
-                    child: _isSubmitting ? const CircularProgressIndicator() : Text(l10n.login),
+                    child: _isSubmitting
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : Text(l10n.login),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -489,7 +498,16 @@ class _SignupCardState extends State<SignupCard> {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: !_agreedToTerms || _isSubmitting ? null : _onSignupPressed,
-                    child: _isSubmitting ? const CircularProgressIndicator() : Text(l10n.signUp),
+                    child: _isSubmitting
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : Text(l10n.signUp),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -645,7 +663,16 @@ class _ResetPasswordCardState extends State<ResetPasswordCard> {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: _isSubmitting ? null : _onResetPressed,
-                    child: _isSubmitting ? const CircularProgressIndicator() : Text(l10n.sendRecoveryLink),
+                    child: _isSubmitting
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : Text(l10n.sendRecoveryLink),
                   ),
                 ),
                 const SizedBox(height: 8),

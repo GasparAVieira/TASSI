@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 
 class GDPRTabContent extends StatefulWidget {
@@ -199,40 +200,41 @@ class _GDPRTabContentState extends State<GDPRTabContent>
                 const SizedBox(height: 10),
 
                 // Action Buttons
-                ListenableBuilder(
-                  listenable: _settings,
-                  builder: (context, _) {
-                    return Column(
-                      children: [
-                        FilledButton(
-                          onPressed: () => _showSnackbar(context, data['exportRequestSuccess']),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: theme.colorScheme.primary,
-                            foregroundColor: theme.colorScheme.onPrimary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                if (AuthScope.of(context).isLoggedIn)
+                  ListenableBuilder(
+                    listenable: _settings,
+                    builder: (context, _) {
+                      return Column(
+                        children: [
+                          FilledButton(
+                            onPressed: () => _showSnackbar(context, data['exportRequestSuccess']),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: theme.colorScheme.primary,
+                              foregroundColor: theme.colorScheme.onPrimary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              minimumSize: const Size(double.infinity, 48),
                             ),
-                            minimumSize: const Size(double.infinity, 48),
+                            child: Text(data['exportButton']),
                           ),
-                          child: Text(data['exportButton']),
-                        ),
-                        const SizedBox(height: 8),
-                        FilledButton(
-                          onPressed: () => _showSnackbar(context, data['deletionRequestSuccess']),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: theme.colorScheme.error,
-                            foregroundColor: theme.colorScheme.onError,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                          const SizedBox(height: 8),
+                          FilledButton(
+                            onPressed: () => _showSnackbar(context, data['deletionRequestSuccess']),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: theme.colorScheme.error,
+                              foregroundColor: theme.colorScheme.onError,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              minimumSize: const Size(double.infinity, 48),
                             ),
-                            minimumSize: const Size(double.infinity, 48),
+                            child: Text(data['deletionButton']),
                           ),
-                          child: Text(data['deletionButton']),
-                        ),
-                      ],
-                    );
-                  }
-                ),
+                        ],
+                      );
+                    }
+                  ),
                 const SizedBox(height: 10),
 
                 // DPO Info Card

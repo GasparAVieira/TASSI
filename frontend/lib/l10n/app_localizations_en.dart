@@ -208,6 +208,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get alreadyHaveAccount => 'Already Have an Account';
 
   @override
+  String get continueWithoutAccount => 'Continue without account';
+
+  @override
+  String get continueWithoutAccountHint =>
+      'You can continue without an account, but the experience will be different.';
+
+  @override
   String get resetPasswordTitle => 'Reset Password';
 
   @override
@@ -237,6 +244,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selectLanguage => 'Select Language';
+
+  @override
+  String get previousLanguage => 'Previous';
 
   @override
   String get cancel => 'Cancel';

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_localizations.dart';
+import 'pages/welcome_page.dart';
+import 'services/auth_service.dart';
 import 'services/settings_service.dart';
 
 // Main Pages
+import 'pages/loading_screen.dart';
+
 import 'pages/map_page.dart';
 import 'pages/goto_page.dart';
 import 'pages/diary_page.dart';
@@ -29,21 +34,58 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   Locale? _locale;
   final SettingsService _settings = SettingsService();
+  final AuthService _authService = AuthService.instance;
+
+  bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
     _settings.addListener(_onSettingsChanged);
+    _authService.addListener(_onAuthChanged);
+    _loadInitialSettings();
   }
 
   @override
   void dispose() {
     _settings.removeListener(_onSettingsChanged);
+    _authService.removeListener(_onAuthChanged);
     super.dispose();
+  }
+
+  Future<void> _loadInitialSettings() async {
+    await _authService.loadSession();
+    await _settings.load();
+    if (!mounted) return;
+
+    final authLanguage = _authService.preferredLanguageCode;
+    final settingsLanguage = _settings.preferredLanguageCode;
+    final initialLocale = _settings.hasPreferredLanguageSetting
+        ? Locale(settingsLanguage)
+        : Locale(authLanguage.isNotEmpty ? authLanguage : settingsLanguage);
+
+    setState(() {
+      _locale = initialLocale;
+      _isInitializing = false;
+    });
   }
 
   void _onSettingsChanged() {
     setState(() {});
+  }
+
+  void _onAuthChanged() {
+    if (_isInitializing) return;
+    final auth = _authService;
+    if (auth.isLoggedIn &&
+        auth.preferredLanguageCode.isNotEmpty &&
+        _settings.preferredLanguageCode == 'pt' &&
+        auth.preferredLanguageCode != _locale?.languageCode) {
+      _settings.setPreferredLanguageCode(auth.preferredLanguageCode);
+      setState(() {
+        _locale = Locale(auth.preferredLanguageCode);
+      });
+    }
   }
 
   void setLocale(Locale locale) {
@@ -54,30 +96,33 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Navigation Diary',
-      debugShowCheckedModeBanner: false,
-      themeMode: _settings.themeMode,
-      theme: _buildTheme(Brightness.light),
-      darkTheme: _buildTheme(Brightness.dark),
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: _settings.useLargeText ? const TextScaler.linear(1.15) : TextScaler.noScaling,
-            highContrast: _settings.isHighContrast,
-          ),
-          child: child!,
-        );
-      },
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: _locale,
-      home: const MainNavigationScreen(),
+    return AuthScope(
+      authService: AuthService.instance,
+      child: MaterialApp(
+        title: 'Navigation Diary',
+        debugShowCheckedModeBanner: false,
+        themeMode: _settings.themeMode,
+        theme: _buildTheme(Brightness.light),
+        darkTheme: _buildTheme(Brightness.dark),
+        builder: (context, child) {
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: _settings.useLargeText ? const TextScaler.linear(1.15) : TextScaler.noScaling,
+              highContrast: _settings.isHighContrast,
+            ),
+            child: child!,
+          );
+        },
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: _locale,
+        home: const LoadingScreen(),
+      ),
     );
   }
 
@@ -161,6 +206,63 @@ class _MyAppState extends State<MyApp> {
           return TextStyle(color: colorScheme.onSurface);
         }),
       ),
+    );
+  }
+}
+
+class RootPage extends StatefulWidget {
+  const RootPage({super.key});
+
+  @override
+  State<RootPage> createState() => _RootPageState();
+}
+
+class _RootPageState extends State<RootPage> {
+  Future<bool>? _initialization;
+  bool _showWelcome = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialization = _loadInitialState();
+  }
+
+  Future<bool> _loadInitialState() async {
+    await AuthService.instance.loadSession();
+    final preferences = await SharedPreferences.getInstance();
+    final hasSeenWelcome = preferences.getBool('has_seen_welcome_page') ?? false;
+    final isLoggedIn = AuthService.instance.isLoggedIn;
+    _showWelcome = !isLoggedIn && !hasSeenWelcome;
+    return _showWelcome;
+  }
+
+  void _onWelcomeComplete() {
+    if (mounted) {
+      setState(() {
+        _showWelcome = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _initialization,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return const MainNavigationScreen();
+        }
+
+        return _showWelcome
+            ? WelcomePage(onContinue: _onWelcomeComplete)
+            : const MainNavigationScreen();
+      },
     );
   }
 }
