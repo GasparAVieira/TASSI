@@ -3,20 +3,20 @@ import ssl
 import uuid
 from typing import Optional
 
-import websocket
+import websockets
 
 
 class EpocService:
     def __init__(self, client_id: str, client_secret: str):
         self.client_id = client_id
         self.client_secret = client_secret
-        self.ws: Optional[websocket.WebSocket] = None
+        self.ws: Optional[websockets.WebSocket] = None
         self.auth_token: Optional[str] = None
         self.session_id: Optional[str] = None
         self.headset_id: Optional[str] = None
 
     def connect(self):
-        self.ws = websocket.create_connection(
+        self.ws = websockets.create_connection(
             "wss://localhost:6868",
             sslopt={"cert_reqs": ssl.CERT_NONE},
         )
