@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/v1/diary-entries",tags=["Diary Entries"],)
 
 @router.post("/",response_model=DiaryEntryResponse,status_code=status.HTTP_201_CREATED,)
 def create_diary_entry(payload: DiaryEntryCreate,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
-    #validate_diary_entry_payload(payload)
+    validate_diary_entry_payload(payload)
 
     entry = DiaryEntry(
         participant_id=current_user.id,
@@ -116,14 +116,7 @@ def update_diary_entry(entry_id: UUID,payload: DiaryEntryUpdate,db: Session = De
     db.commit()
     db.refresh(entry)
 
-    updated_entry = (
-        db.query(DiaryEntry)
-        .options(joinedload(DiaryEntry.media_items))
-        .filter(DiaryEntry.id == entry.id)
-        .first()
-    )
-
-    return updated_entry
+    return entry
 
 def validate_diary_entry_payload(payload: DiaryEntryCreate) -> None:
     if payload.entry_type == "text":
