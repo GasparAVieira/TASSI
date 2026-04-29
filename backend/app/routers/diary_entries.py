@@ -109,14 +109,33 @@ def update_diary_entry(entry_id: UUID,payload: DiaryEntryUpdate,db: Session = De
         )
 
     update_data = payload.model_dump(exclude_unset=True)
+    update_data.pop("media_items", None)
 
     for field, value in update_data.items():
         setattr(entry, field, value)
 
-    db.commit()
-    db.refresh(entry)
+    if payload.media_items is not None:
+        entry.media_items.clear()
+        for item in payload.media_items:
+            entry.media_items.append(DiaryMedia(
+                entry_id=entry.id,
+                media_type=item.media_type,
+                url=item.url,
+                duration_sec=item.duration_sec,
+                transcription=item.transcription,
+                language=item.language,
+            ))
 
-    return entry
+    _validate_entry_state(entry.entry_type, entry.body, entry.media_items)
+
+    db.commit()
+
+    return (
+        db.query(DiaryEntry)
+        .options(joinedload(DiaryEntry.media_items))
+        .filter(DiaryEntry.id == entry_id)
+        .first()
+    )
 
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_diary_entry(
@@ -144,40 +163,44 @@ def delete_diary_entry(
 
 
 def validate_diary_entry_payload(payload: DiaryEntryCreate) -> None:
-    if payload.entry_type == "text":
-        if not payload.body:
+    _validate_entry_state(payload.entry_type, payload.body, payload.media_items)
+
+
+def _validate_entry_state(entry_type: str, body, media_items) -> None:
+    if entry_type == "text":
+        if not body:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Text entries require body",
             )
 
-        if payload.media_items:
+        if media_items:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Text entries cannot include media items",
             )
 
-    if payload.entry_type in {"audio", "image", "video"}:
-        if not payload.media_items:
+    if entry_type in {"audio", "image", "video"}:
+        if not media_items:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Media entries require at least one media item",
             )
 
-        for media_item in payload.media_items:
-            if payload.entry_type == "audio" and media_item.media_type != "audio":
+        for media_item in media_items:
+            if entry_type == "audio" and media_item.media_type != "audio":
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Audio entry requires audio media",
                 )
 
-            if payload.entry_type == "image" and media_item.media_type != "image":
+            if entry_type == "image" and media_item.media_type != "image":
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Image entry requires image media",
                 )
 
-            if payload.entry_type == "video" and media_item.media_type != "video":
+            if entry_type == "video" and media_item.media_type != "video":
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Video entry requires video media",

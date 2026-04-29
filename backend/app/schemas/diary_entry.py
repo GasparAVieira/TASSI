@@ -33,6 +33,7 @@ class DiaryEntryUpdate(BaseModel):
 
     context_notes: Optional[dict[str, Any]] = None
     is_synced: Optional[bool] = None
+    media_items: Optional[list[DiaryMediaCreate]] = None
 
 
 class DiaryEntryResponse(BaseModel):
