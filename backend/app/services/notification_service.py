@@ -19,10 +19,10 @@ def user_has_diary_today(db: Session, user: User) -> bool:
     start_of_today = get_start_of_today()
 
     return (
-        db.query(Diary)
+        db.query(DiaryEntry)
         .filter(
-            Diary.user_id == user.id,
-            Diary.created_at >= start_of_today,
+            DiaryEntry.participant_id == user.id,
+            DiaryEntry.recorded_at >= start_of_today,
         )
         .first()
         is not None

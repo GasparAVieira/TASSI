@@ -3,7 +3,7 @@ from fastapi import FastAPI
 
 from app.core.config import settings
 from app.database import Base, engine
-from app.routers import auth, buildings, locations, navigation, paths, rooms, users, diary_entries, notifications, notification_socket
+from app.routers import auth, buildings, locations, navigation, paths, rooms, users, diary_entries, notifications, notification_socket, epoc_router
 from app.jobs.notification_scheduler import notification_scheduler_loop
 
 Base.metadata.create_all(bind=engine)
@@ -29,3 +29,4 @@ app.include_router(navigation.router)
 app.include_router(diary_entries.router)
 app.include_router(notifications.router)
 app.include_router(notification_socket.router)
+app.include_router(epoc_router.router)
