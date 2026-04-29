@@ -57,3 +57,4 @@ class User(Base):
 
     diary_entries = relationship("DiaryEntry", back_populates="participant", cascade="all, delete-orphan")
     epoc_sessions = relationship("EpocSession",back_populates="participant",cascade="all, delete-orphan",)
+    

@@ -13,14 +13,14 @@ async def run_diary_notification_check():
         users = db.query(User).all()
 
         for user in users:
-            notification_payload = create_diary_reminder_for_user(db, user)
+            payload = create_diary_reminder_for_user(db, user)
 
-            if notification_payload is not None:
+            if payload:
                 await notification_manager.send_to_user(
-                    user_id=user.id,
-                    payload={
+                    user.id,
+                    {
                         "event": "notification.created",
-                        "data": notification_payload,
+                        "data": payload,
                     },
                 )
 
@@ -32,5 +32,5 @@ async def notification_scheduler_loop():
     while True:
         await run_diary_notification_check()
 
-        # verifica de hora a hora
-        await asyncio.sleep(60 * 60)
+        # corre de hora a hora
+        await asyncio.sleep(30)
