@@ -1,8 +1,11 @@
+from datetime import datetime
+from typing import Annotated, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.enums import DiaryEntryType
 from app.dependencies import get_current_user
 from app.database import get_db
 from app.models.diary_entry import DiaryEntry
@@ -10,6 +13,7 @@ from app.models.diary_media import DiaryMedia
 from app.models.user import User
 from app.schemas.diary_entry import (
     DiaryEntryCreate,
+    DiaryEntryListResponse,
     DiaryEntryResponse,
     DiaryEntryUpdate,
 )
@@ -58,15 +62,36 @@ def create_diary_entry(payload: DiaryEntryCreate,db: Session = Depends(get_db),c
     return created_entry
 
 
-@router.get("/me",response_model=list[DiaryEntryResponse],)
-def list_my_diary_entries(db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
-    return (
-        db.query(DiaryEntry)
+@router.get("/me", response_model=DiaryEntryListResponse)
+def list_my_diary_entries(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    entry_type: Annotated[Optional[DiaryEntryType], Query()] = None,
+    recorded_from: Annotated[Optional[datetime], Query()] = None,
+    recorded_to: Annotated[Optional[datetime], Query()] = None,
+):
+    query = db.query(DiaryEntry).filter(DiaryEntry.participant_id == current_user.id)
+
+    if entry_type is not None:
+        query = query.filter(DiaryEntry.entry_type == entry_type.value)
+    if recorded_from is not None:
+        query = query.filter(DiaryEntry.recorded_at >= recorded_from)
+    if recorded_to is not None:
+        query = query.filter(DiaryEntry.recorded_at <= recorded_to)
+
+    total = query.count()
+    items = (
+        query
         .options(joinedload(DiaryEntry.media_items))
-        .filter(DiaryEntry.participant_id == current_user.id)
         .order_by(DiaryEntry.recorded_at.desc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
+
+    return DiaryEntryListResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.get("/{entry_id}",response_model=DiaryEntryResponse,)

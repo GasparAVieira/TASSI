@@ -55,3 +55,10 @@ class DiaryEntryResponse(BaseModel):
     media_items: list[DiaryMediaResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DiaryEntryListResponse(BaseModel):
+    items: list[DiaryEntryResponse]
+    total: int
+    limit: int
+    offset: int
