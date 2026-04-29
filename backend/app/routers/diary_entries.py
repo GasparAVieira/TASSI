@@ -118,6 +118,31 @@ def update_diary_entry(entry_id: UUID,payload: DiaryEntryUpdate,db: Session = De
 
     return entry
 
+@router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_diary_entry(
+    entry_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    entry = (
+        db.query(DiaryEntry)
+        .filter(
+            DiaryEntry.id == entry_id,
+            DiaryEntry.participant_id == current_user.id,
+        )
+        .first()
+    )
+
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Diary entry not found",
+        )
+
+    db.delete(entry)
+    db.commit()
+
+
 def validate_diary_entry_payload(payload: DiaryEntryCreate) -> None:
     if payload.entry_type == "text":
         if not payload.body:
