@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from shapely import wkt
 from sqlalchemy.orm import Session
 from uuid import UUID
 
