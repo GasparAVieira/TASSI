@@ -120,7 +120,10 @@ def get_diary_entry(entry_id: UUID,db: Session = Depends(get_db),current_user: U
 def update_diary_entry(entry_id: UUID,payload: DiaryEntryUpdate,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
     entry = (
         db.query(DiaryEntry)
-        .options(joinedload(DiaryEntry.media_items))
+        .options(
+            joinedload(DiaryEntry.media_items),
+            joinedload(DiaryEntry.comments).joinedload(DiaryEntryComment.author),
+        )
         .filter(
             DiaryEntry.id == entry_id,
             DiaryEntry.participant_id == current_user.id,
@@ -158,7 +161,10 @@ def update_diary_entry(entry_id: UUID,payload: DiaryEntryUpdate,db: Session = De
 
     return (
         db.query(DiaryEntry)
-        .options(joinedload(DiaryEntry.media_items))
+        .options(
+            joinedload(DiaryEntry.media_items),
+            joinedload(DiaryEntry.comments).joinedload(DiaryEntryComment.author),
+        )
         .filter(DiaryEntry.id == entry_id)
         .first()
     )

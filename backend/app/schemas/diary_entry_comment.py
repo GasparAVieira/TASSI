@@ -18,7 +18,7 @@ class DiaryEntryCommentCreate(BaseModel):
 
 
 class DiaryEntryCommentUpdate(BaseModel):
-    body: Optional[str] = None
+    body: Optional[str] = Field(default=None, min_length=1)
 
 
 class DiaryEntryCommentResponse(BaseModel):
