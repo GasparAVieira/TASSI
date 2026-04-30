@@ -12,6 +12,8 @@ from app.models.diary_entry import DiaryEntry
 from app.models.diary_media import DiaryMedia
 from app.models.user import User
 from app.models.notification_templates import NotificationTemplate  # registers mapper
+from app.models.diary_entry_comment import DiaryEntryComment  # registers mapper
+from app.models.epoc_session import EpocSession  # registers mapper (required by User relationship)
 
 
 # ---------------------------------------------------------------------------
@@ -52,10 +54,14 @@ def _cascade_engine():
                 full_name TEXT NOT NULL,
                 email TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
+                phone TEXT,
+                bio TEXT,
                 role TEXT NOT NULL,
                 accessibility_profile TEXT NOT NULL,
                 preferred_language TEXT NOT NULL,
-                audio_guidance INTEGER NOT NULL
+                audio_guidance INTEGER NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """))
         conn.execute(text("""
@@ -86,8 +92,6 @@ def _cascade_engine():
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """))
-        # Required so SQLAlchemy can configure the UserNotification mapper
-        # (it has a relationship to NotificationTemplate).
         conn.execute(text("""
             CREATE TABLE notification_templates (
                 id TEXT PRIMARY KEY,
@@ -96,6 +100,16 @@ def _cascade_engine():
                 message_pt TEXT NOT NULL,
                 priority TEXT NOT NULL,
                 is_active INTEGER NOT NULL
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE diary_entry_comments (
+                id TEXT PRIMARY KEY,
+                entry_id TEXT NOT NULL,
+                author_id TEXT,
+                body TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """))
         conn.commit()
@@ -163,7 +177,7 @@ def test_delete_cascade_removes_media():
     uid = uuid.uuid4()
     with eng.connect() as conn:
         conn.execute(
-            text("INSERT INTO users VALUES (:id,'T','t@t.com','h','user','none','pt',0)"),
+            text("INSERT INTO users VALUES (:id,'T','t@t.com','h',NULL,NULL,'user','none','pt',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"),
             {"id": str(uid)},
         )
         conn.commit()
