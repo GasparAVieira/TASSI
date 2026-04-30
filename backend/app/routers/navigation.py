@@ -69,7 +69,7 @@ def get_next_step_from_beacon(
 ):
     location = (
         db.query(Location)
-        .filter(Location.beacon_uuid == payload.beacon_uuid)
+        .filter(Location.uuid == payload.beacon_uuid)
         .first()
     )
 

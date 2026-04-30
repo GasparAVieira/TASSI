@@ -34,4 +34,4 @@ async def notification_scheduler_loop():
         await run_notification_checks()
 
         # corre de hora a hora
-        await asyncio.sleep(10)
+        await asyncio.sleep(60 * 60)
