@@ -6,3 +6,4 @@ from app.models.user import User
 from app.models.user_notifications import UserNotification
 from app.models.diary_entry import DiaryEntry
 from app.models.diary_media import DiaryMedia
+from app.models.diary_entry_comment import DiaryEntryComment

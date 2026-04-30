@@ -9,6 +9,7 @@ from app.core.enums import DiaryEntryType
 from app.dependencies import get_current_user
 from app.database import get_db
 from app.models.diary_entry import DiaryEntry
+from app.models.diary_entry_comment import DiaryEntryComment
 from app.models.diary_media import DiaryMedia
 from app.models.user import User
 from app.schemas.diary_entry import (
@@ -54,7 +55,7 @@ def create_diary_entry(payload: DiaryEntryCreate,db: Session = Depends(get_db),c
 
     created_entry = (
         db.query(DiaryEntry)
-        .options(joinedload(DiaryEntry.media_items))
+        .options(joinedload(DiaryEntry.media_items), joinedload(DiaryEntry.comments).joinedload(DiaryEntryComment.author))
         .filter(DiaryEntry.id == entry.id)
         .first()
     )
@@ -84,7 +85,7 @@ def list_my_diary_entries(
     total = query.count()
     items = (
         query
-        .options(joinedload(DiaryEntry.media_items))
+        .options(joinedload(DiaryEntry.media_items), joinedload(DiaryEntry.comments).joinedload(DiaryEntryComment.author))
         .order_by(DiaryEntry.recorded_at.desc())
         .offset(offset)
         .limit(limit)
@@ -98,7 +99,7 @@ def list_my_diary_entries(
 def get_diary_entry(entry_id: UUID,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
     entry = (
         db.query(DiaryEntry)
-        .options(joinedload(DiaryEntry.media_items))
+        .options(joinedload(DiaryEntry.media_items), joinedload(DiaryEntry.comments).joinedload(DiaryEntryComment.author))
         .filter(
             DiaryEntry.id == entry_id,
             DiaryEntry.participant_id == current_user.id,

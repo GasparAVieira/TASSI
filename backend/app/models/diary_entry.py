@@ -37,6 +37,7 @@ class DiaryEntry(Base):
 
     participant = relationship("User", back_populates="diary_entries")
     media_items = relationship("DiaryMedia",back_populates="entry",cascade="all, delete-orphan",)
+    comments = relationship("DiaryEntryComment",back_populates="entry",cascade="all, delete-orphan",order_by="DiaryEntryComment.created_at",)
 
     location = relationship("Location",foreign_keys=[location_id],)
     building = relationship("Building",foreign_keys=[building_id],)
