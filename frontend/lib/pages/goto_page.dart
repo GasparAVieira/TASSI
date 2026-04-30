@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../models/location.dart';
-import '../services/location_service.dart';
+import '../models/room.dart';
+import '../services/room_service.dart';
 import '../services/navigation_service.dart';
 import '../widgets/error_popup.dart';
-import '../widgets/location_card.dart';
+import '../widgets/room_card.dart';
 
 class GoToPage extends StatefulWidget {
   const GoToPage({super.key});
@@ -18,37 +18,37 @@ class _GoToPageState extends State<GoToPage> {
   bool _isLoading = false;
   bool _isRequestingRoute = false;
 
-  final LocationService _locationService = LocationService();
+  final RoomService _roomService = RoomService();
   final NavigationService _navigationService = NavigationService();
   final TextEditingController _searchController = TextEditingController();
 
-  List<Location> _allLocations = [];
-  List<Location> _displayedLocations = [];
+  List<Room> _allRooms = [];
+  List<Room> _displayedRooms = [];
 
-  Location? _selectedOrigin;
+  Room? _selectedOrigin;
   Map<String, dynamic>? _routeResult;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(() {
-      _filterLocations(_searchController.text);
+      _filterRooms(_searchController.text);
     });
-    _loadLocations();
+    _loadRooms();
   }
 
-  Future<void> _loadLocations() async {
+  Future<void> _loadRooms() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final locations = await _locationService.fetchLocations();
+      final rooms = await _roomService.fetchRooms();
       if (!mounted) return;
 
       setState(() {
-        _allLocations = locations;
-        _displayedLocations = List.from(locations);
+        _allRooms = rooms;
+        _displayedRooms = List.from(rooms);
       });
     } catch (_) {
       if (mounted) {
@@ -63,7 +63,7 @@ class _GoToPageState extends State<GoToPage> {
     }
   }
 
-  void _filterLocations(String query) {
+  void _filterRooms(String query) {
     final normalized = query.toLowerCase().trim();
 
     setState(() {
@@ -71,20 +71,20 @@ class _GoToPageState extends State<GoToPage> {
       _routeResult = null;
 
       if (normalized.isEmpty) {
-        _displayedLocations = List.from(_allLocations);
+        _displayedRooms = List.from(_allRooms);
       } else {
-        _displayedLocations = _allLocations.where((location) {
-          return location.name.toLowerCase().contains(normalized) ||
-              (location.description?.toLowerCase().contains(normalized) ?? false) ||
-              location.type.toLowerCase().contains(normalized);
+        _displayedRooms = _allRooms.where((room) {
+          return room.name.toLowerCase().contains(normalized) ||
+              room.code.toLowerCase().contains(normalized) ||
+              room.floor.toString().contains(normalized);
         }).toList();
       }
     });
   }
 
-  Future<void> _requestRoute(Location destination) async {
+  Future<void> _requestRoute(Room destination) async {
     if (_selectedOrigin == null) {
-      _showMessage('Select your current location first.');
+      _showMessage('Select your current room first.');
       return;
     }
 
@@ -121,7 +121,7 @@ class _GoToPageState extends State<GoToPage> {
 
   void _showRouteBottomSheet(
     Map<String, dynamic> route,
-    Location destination,
+    Room destination,
   ) {
     final steps = route['steps'] as List<dynamic>? ?? [];
 
@@ -217,7 +217,7 @@ class _GoToPageState extends State<GoToPage> {
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Search destination...',
+                      hintText: 'Search destinations...',
                       prefixIcon: Icon(Icons.search, color: theme.colorScheme.primary),
                       suffixIcon: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -236,7 +236,7 @@ class _GoToPageState extends State<GoToPage> {
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 _searchController.clear();
-                                _filterLocations('');
+                                _filterRooms('');
                               },
                             ),
                         ],
@@ -253,8 +253,8 @@ class _GoToPageState extends State<GoToPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
 
+            /*
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Card(
@@ -266,17 +266,17 @@ class _GoToPageState extends State<GoToPage> {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: DropdownButtonFormField<Location>(
+                  child: DropdownButtonFormField<Room>(
                     value: _selectedOrigin,
                     decoration: const InputDecoration(
-                      labelText: 'Current location',
+                      labelText: 'Current room',
                       border: OutlineInputBorder(),
                     ),
-                    items: _allLocations
+                    items: _allRooms
                         .map(
-                          (location) => DropdownMenuItem<Location>(
-                            value: location,
-                            child: Text(location.name),
+                          (room) => DropdownMenuItem<Room>(
+                            value: room,
+                            child: Text(room.name),
                           ),
                         )
                         .toList(),
@@ -290,58 +290,47 @@ class _GoToPageState extends State<GoToPage> {
                 ),
               ),
             ),
+            */
 
             const SizedBox(height: 10),
 
             Expanded(
-              child: _displayedLocations.isEmpty && !_isLoading
+              child: _displayedRooms.isEmpty && !_isLoading
                   ? Center(
                       child: Text(
-                        'No Locations Found.',
+                        'No rooms found.',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      itemCount: _displayedLocations.length,
-                      itemBuilder: (context, index) {
-                        final location = _displayedLocations[index];
+                  : RefreshIndicator(
+                      onRefresh: _loadRooms,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        itemCount: _displayedRooms.length,
+                        itemBuilder: (context, index) {
+                          final room = _displayedRooms[index];
 
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10.0),
-                          child: Column(
-                            children: [
-                              LocationCard(
-                                location: location,
-                                isExpanded: _expandedIndex == index,
-                                onToggle: () {
-                                  setState(() {
-                                    if (_expandedIndex == index) {
-                                      _expandedIndex = null;
-                                    } else {
-                                      _expandedIndex = index;
-                                    }
-                                  });
-                                },
-                                onFavoriteToggle: () {},
-                              ),
-                              const SizedBox(height: 6),
-                              SizedBox(
-                                width: double.infinity,
-                                child: FilledButton.icon(
-                                  onPressed: _isRequestingRoute
-                                      ? null
-                                      : () => _requestRoute(location),
-                                  icon: const Icon(Icons.alt_route),
-                                  label: const Text('Go To'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10.0),
+                            child: RoomCard(
+                              room: room,
+                              isExpanded: _expandedIndex == index,
+                              onToggle: () {
+                                setState(() {
+                                  if (_expandedIndex == index) {
+                                    _expandedIndex = null;
+                                  } else {
+                                    _expandedIndex = index;
+                                  }
+                                });
+                              },
+                              onFavoriteToggle: () {},
+                            ),
+                          );
+                        },
+                      ),
                     ),
             ),
           ],

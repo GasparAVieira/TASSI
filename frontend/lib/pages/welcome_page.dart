@@ -3,8 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
 import '../main.dart';
+import '../services/accessibility_profile_service.dart';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
+import '../widgets/accessibility_profile_picker.dart';
 import '../widgets/auth_widgets.dart';
 
 const String _kHasSeenWelcomePageKey = 'has_seen_welcome_page';
@@ -21,11 +23,18 @@ class WelcomePage extends StatefulWidget {
 }
 
 class _WelcomePageState extends State<WelcomePage> {
+  final AccessibilityProfileService _accessibilityService = AccessibilityProfileService();
   _AuthView _currentView = _AuthView.signup;
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _accessibilityService.resetFromSettings();
+  }
 
   @override
   void dispose() {
@@ -290,6 +299,24 @@ class _WelcomePageState extends State<WelcomePage> {
                 confirmPasswordController: _confirmPasswordController,
                 onSignup: _onSignup,
                 onSwitchToLogin: _switchToLogin,
+                accessibilityProfileWidget: ListenableBuilder(
+                  listenable: _accessibilityService,
+                  builder: (context, _) {
+                    return AccessibilityProfilePicker(
+                      wheelchairEnabled: _accessibilityService.wheelchairEnabled,
+                      lowVisionEnabled: _accessibilityService.lowVisionEnabled,
+                      blindEnabled: _accessibilityService.blindEnabled,
+                      onWheelchairChanged: (value) =>
+                          _accessibilityService.setWheelchairEnabled(value),
+                      onLowVisionChanged: (value) =>
+                          _accessibilityService.setLowVisionEnabled(value),
+                      onBlindChanged: (value) =>
+                          _accessibilityService.setBlindEnabled(value),
+                      showApplyButton: false,
+                      useCard: false,
+                    );
+                  },
+                ),
               )
             : ResetPasswordCard(
                 emailController: _emailController,
@@ -306,27 +333,42 @@ class _WelcomePageState extends State<WelcomePage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Align(
-                alignment: Alignment.topRight,
-                child: TextButton.icon(
-                  onPressed: () => _showLanguageBottomSheet(context),
-                  icon: Icon(
-                    Icons.translate,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                  label: Text(
-                    l10n.changeLanguage,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
+              padding: const EdgeInsets.fromLTRB(26, 8, 26, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton.icon(
+                    onPressed: _onContinueWithoutAccount,
+                    icon: Icon(
+                      Icons.arrow_back_ios_new,
+                      color: theme.colorScheme.primary,
+                      size: 18,
+                    ),
+                    label: Text(
+                      l10n.continueWithoutAccount,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: theme.colorScheme.primary,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: theme.colorScheme.onSurface,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  IconButton(
+                    onPressed: () => _showLanguageBottomSheet(context),
+                    icon: Icon(
+                      Icons.translate,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    tooltip: l10n.changeLanguage,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
-                ),
+                ],
               ),
             ),
             Expanded(
@@ -336,21 +378,8 @@ class _WelcomePageState extends State<WelcomePage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 620),
+                      constraints: const BoxConstraints(minHeight: 520),
                       child: authCard,
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: _onContinueWithoutAccount,
-                      child: Text(l10n.continueWithoutAccount),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.continueWithoutAccountHint,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
                     ),
                   ],
                 ),

@@ -64,6 +64,8 @@ class _MapPageState extends State<MapPage> {
             top: 50,
             right: 16,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 // Sidebar hide/show button
                 Container(
@@ -79,20 +81,45 @@ class _MapPageState extends State<MapPage> {
                     ],
                   ),
                   child: IconButton(
-                    onPressed: () => setState(() => isSidebarExpanded = !isSidebarExpanded),
+                    onPressed: () {
+                      final willOpen = !isSidebarExpanded;
+                      setState(() => isSidebarExpanded = willOpen);
+                      if (willOpen) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          _floorScrollController.jumpToItem(
+                            floors.indexOf(selectedFloor),
+                          );
+                        });
+                      }
+                    },
                     icon: Icon(
-                      isSidebarExpanded ? Icons.chevron_right : Icons.chevron_left,
+                      isSidebarExpanded ? Icons.chevron_left : Icons.chevron_right,
                       color: theme.colorScheme.primary,
                     ),
                     tooltip: isSidebarExpanded ? 'Hide sidebar' : 'Show sidebar',
                   ),
                 ),
                 const SizedBox(height: 12),
-                AnimatedSize(
+                AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
+                  transitionBuilder: (child, animation) {
+                    final offsetAnimation = Tween<Offset>(
+                      begin: const Offset(1, 0),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeInOut,
+                    ));
+                    return SlideTransition(
+                      position: offsetAnimation,
+                      child: FadeTransition(opacity: animation, child: child),
+                    );
+                  },
                   child: isSidebarExpanded
                       ? Column(
+                          key: const ValueKey('sidebarOpen'),
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             // Floor Selector
                             Container(
@@ -188,7 +215,11 @@ class _MapPageState extends State<MapPage> {
                             ),
                           ],
                         )
-                      : const SizedBox.shrink(),
+                      : const SizedBox(
+                          key: ValueKey('sidebarClosed'),
+                          width: 50,
+                          height: 0,
+                        ),
                 ),
               ],
             ),

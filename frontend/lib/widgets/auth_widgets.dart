@@ -217,6 +217,7 @@ class SignupCard extends StatefulWidget {
   final TextEditingController confirmPasswordController;
   final SignupCallback onSignup;
   final VoidCallback onSwitchToLogin;
+  final Widget? accessibilityProfileWidget;
 
   const SignupCard({
     super.key,
@@ -226,6 +227,7 @@ class SignupCard extends StatefulWidget {
     required this.confirmPasswordController,
     required this.onSignup,
     required this.onSwitchToLogin,
+    this.accessibilityProfileWidget,
   });
 
   @override
@@ -346,7 +348,7 @@ class _SignupCardState extends State<SignupCard> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
                   l10n.createAccountTitle,
@@ -438,6 +440,11 @@ class _SignupCardState extends State<SignupCard> {
                   ),
                 ),
                 _buildErrorText(theme, l10n.passwordsDoNotMatch),
+                if (widget.accessibilityProfileWidget != null) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(width: double.infinity, child: widget.accessibilityProfileWidget!),
+                  const SizedBox(height: 8),
+                ],
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [

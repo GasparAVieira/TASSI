@@ -39,6 +39,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appPermissionsSubtitle => 'Manage application\'s permissions';
 
   @override
+  String get locationPermissionRequiredTitle => 'Location Permission Required';
+
+  @override
+  String get locationPermissionRequiredSubtitle =>
+      'Please allow location access to continue.';
+
+  @override
+  String get grantLocationPermission => 'Grant Location Permission';
+
+  @override
+  String get locationPermissionRequiredMessage =>
+      'Location permission is required to use this app.';
+
+  @override
+  String get locationPermissionRequiredOpenSettingsMessage =>
+      'Location permission is required to use this app. Open settings to enable it.';
+
+  @override
   String get permissionCamera => 'Camera';
 
   @override
@@ -51,6 +69,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get permissionMicrophoneSubtitle =>
       'Required for capturing video sound';
+
+  @override
+  String get permissionLocation => 'Location';
+
+  @override
+  String get permissionLocationSubtitle =>
+      'Required to get your current coordinates';
 
   @override
   String get permissionGallery => 'Photo Library';
@@ -116,6 +141,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accessibility => 'Accessibility';
+
+  @override
+  String get accessibilityProfile => 'Accessibility Profile';
+
+  @override
+  String get wheelchairProfile => 'Wheelchair';
+
+  @override
+  String get lowVisionProfile => 'Low Vision';
+
+  @override
+  String get blindProfile => 'Blind';
+
+  @override
+  String get applyProfileSettings => 'Apply Profile Settings';
+
+  @override
+  String get accessibilityProfileDescriptionWheelchair =>
+      'Routes will use wheelchair-friendly path weights.';
+
+  @override
+  String get accessibilityProfileDescriptionBlind =>
+      'Routes will use blind-friendly path weights.';
+
+  @override
+  String get accessibilityProfileDescriptionBoth =>
+      'Low vision mode is enabled: high contrast, large text, audio feedback, navigation, and haptic assistance.';
+
+  @override
+  String get accessibilityProfileDescriptionNone =>
+      'Standard routing will be used.';
 
   @override
   String get hapticFeedback => 'Haptic Feedback';
@@ -214,7 +270,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get alreadyHaveAccount => 'Already Have an Account';
 
   @override
-  String get continueWithoutAccount => 'Continue without account';
+  String get continueWithoutAccount => 'Continue Without Account';
 
   @override
   String get continueWithoutAccountHint =>

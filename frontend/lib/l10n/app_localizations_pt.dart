@@ -39,6 +39,25 @@ class AppLocalizationsPt extends AppLocalizations {
   String get appPermissionsSubtitle => 'Gerir permissões da aplicação';
 
   @override
+  String get locationPermissionRequiredTitle =>
+      'Permissão de Localização Necessária';
+
+  @override
+  String get locationPermissionRequiredSubtitle =>
+      'Por favor, permita o acesso à localização para continuar.';
+
+  @override
+  String get grantLocationPermission => 'Conceder Permissão de Localização';
+
+  @override
+  String get locationPermissionRequiredMessage =>
+      'A permissão de localização é necessária para usar esta app.';
+
+  @override
+  String get locationPermissionRequiredOpenSettingsMessage =>
+      'A permissão de localização é necessária para usar esta app. Abra as definições para ativá-la.';
+
+  @override
   String get permissionCamera => 'Câmara';
 
   @override
@@ -51,6 +70,13 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get permissionMicrophoneSubtitle =>
       'Necessário para gravar áudio de vídeo';
+
+  @override
+  String get permissionLocation => 'Localização';
+
+  @override
+  String get permissionLocationSubtitle =>
+      'Necessário para obter as suas coordenadas atuais';
 
   @override
   String get permissionGallery => 'Galeria';
@@ -116,6 +142,37 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get accessibility => 'Acessibilidade';
+
+  @override
+  String get accessibilityProfile => 'Perfil de Acessibilidade';
+
+  @override
+  String get wheelchairProfile => 'Cadeira de Rodas';
+
+  @override
+  String get lowVisionProfile => 'Baixa Visão';
+
+  @override
+  String get blindProfile => 'Cegueira';
+
+  @override
+  String get applyProfileSettings => 'Aplicar Perfil de Acessibilidade';
+
+  @override
+  String get accessibilityProfileDescriptionWheelchair =>
+      'As rotas usarão pesos compatíveis com cadeira de rodas.';
+
+  @override
+  String get accessibilityProfileDescriptionBlind =>
+      'As rotas usarão pesos compatíveis com cegueira.';
+
+  @override
+  String get accessibilityProfileDescriptionBoth =>
+      'O modo baixa visão está ativado: alto contraste, texto grande, áudio, navegação e feedback háptico.';
+
+  @override
+  String get accessibilityProfileDescriptionNone =>
+      'Serão usadas rotas padrão.';
 
   @override
   String get hapticFeedback => 'Feedback Háptico';
@@ -215,7 +272,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get alreadyHaveAccount => 'Já tem uma conta?';
 
   @override
-  String get continueWithoutAccount => 'Continuar sem conta';
+  String get continueWithoutAccount => 'Continuar Sem Conta';
 
   @override
   String get continueWithoutAccountHint =>

@@ -64,6 +64,9 @@ class SettingsService extends ChangeNotifier {
   // Accessibility preference keys
   static const String _kHapticFeedbackKey = 'settings_haptic_feedback';
   static const String _kAccessibilityProfileKey = 'settings_accessibility_profile';
+  static const List<String> accessibilityPreferenceKeys = [
+    _kAccessibilityProfileKey,
+  ];
 
   // Runtime preference state
   ThemeMode _themeMode = ThemeMode.system;

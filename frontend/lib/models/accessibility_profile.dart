@@ -25,4 +25,36 @@ enum AccessibilityProfile {
         return AccessibilityProfile.None;
     }
   }
+
+  static AccessibilityProfile fromToggles({
+    required bool wheelchair,
+    required bool blind,
+  }) {
+    if (wheelchair && blind) {
+      return AccessibilityProfile.LowVision;
+    }
+    if (wheelchair) {
+      return AccessibilityProfile.Wheelchair;
+    }
+    if (blind) {
+      return AccessibilityProfile.Blind;
+    }
+    return AccessibilityProfile.None;
+  }
+
+  bool get isWheelchair =>
+      this == AccessibilityProfile.Wheelchair ||
+      this == AccessibilityProfile.WheelchairBiometric ||
+      this == AccessibilityProfile.LowVision;
+
+  bool get isBlind =>
+      this == AccessibilityProfile.Blind ||
+      this == AccessibilityProfile.LowVision;
+
+  AccessibilityProfile get simpleProfile {
+    if (this == AccessibilityProfile.LowVision) return AccessibilityProfile.LowVision;
+    if (isWheelchair) return AccessibilityProfile.Wheelchair;
+    if (isBlind) return AccessibilityProfile.Blind;
+    return AccessibilityProfile.None;
+  }
 }
