@@ -14,7 +14,6 @@ def get_start_of_today() -> datetime:
     now = datetime.now(timezone.utc)
     return datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
 
-
 def user_has_diary_today(db: Session, user: User) -> bool:
     start_of_today = get_start_of_today()
 
@@ -28,7 +27,6 @@ def user_has_diary_today(db: Session, user: User) -> bool:
         is not None
     )
 
-
 def get_template_by_type(
     db: Session,
     template_type: str,
@@ -41,7 +39,6 @@ def get_template_by_type(
         )
         .first()
     )
-
 
 def user_received_template_today(
     db: Session,
@@ -60,7 +57,6 @@ def user_received_template_today(
         .first()
         is not None
     )
-
 
 def create_user_notification(
     db: Session,
@@ -86,7 +82,6 @@ def create_user_notification(
 
     return notification
 
-
 def create_user_notification_if_not_sent_today(
     db: Session,
     user: User,
@@ -101,7 +96,6 @@ def create_user_notification_if_not_sent_today(
         return None
 
     return create_user_notification(db, user, template_type)
-
 
 def serialize_user_notification(
     notification: UserNotification,
@@ -129,7 +123,6 @@ def serialize_user_notification(
         "expires_at": notification.expires_at,
     }
 
-
 def create_diary_reminder_for_user(
     db: Session,
     user: User,
@@ -149,7 +142,6 @@ def create_diary_reminder_for_user(
     language = user.preferred_language or Language.pt
 
     return serialize_user_notification(notification, language)
-
 
 def get_user_notifications(
     db: Session,
@@ -181,7 +173,6 @@ def get_user_notifications(
         for notification in notifications
     ]
 
-
 def mark_notification_as_read(
     db: Session,
     user: User,
@@ -206,7 +197,6 @@ def mark_notification_as_read(
 
     return notification
 
-
 def dismiss_notification(
     db: Session,
     user: User,
@@ -230,3 +220,79 @@ def dismiss_notification(
     db.refresh(notification)
 
     return notification
+
+def create_inactivity_reminder_for_user(db: Session, user: User) -> dict | None:
+    # exemplo: sem diary há 2 dias
+    from datetime import timedelta
+
+    limit = datetime.now(timezone.utc) - timedelta(days=2)
+
+    has_recent = (
+        db.query(DiaryEntry)
+        .filter(
+            DiaryEntry.participant_id == user.id,
+            DiaryEntry.recorded_at >= limit,
+        )
+        .first()
+    )
+
+    if has_recent:
+        return None
+
+    notification = create_user_notification_if_not_sent_today(
+        db,
+        user,
+        "inactivity_reminder",
+    )
+
+    if not notification:
+        return None
+
+    return serialize_user_notification(notification, user.preferred_language)
+
+def create_welcome_notification(db: Session, user: User) -> dict | None:
+    if user.created_at.date() != datetime.now(timezone.utc).date():
+        return None
+
+    notification = create_user_notification(
+        db,
+        user,
+        "welcome",
+    )
+
+    if not notification:
+        return None
+
+    return serialize_user_notification(notification, user.preferred_language)
+
+def run_all_notification_rules(db: Session, user: User):
+    return [
+        create_diary_reminder_for_user(db, user),
+        create_inactivity_reminder_for_user(db, user),
+        create_welcome_notification(db, user),
+    ]
+
+# DEBUG
+def test_all_notifications_for_user(db: Session, user):
+    templates = (
+        db.query(NotificationTemplate)
+        .filter(NotificationTemplate.is_active == True)
+        .all()
+    )
+
+    notifications = []
+
+    for template in templates:
+        notification = UserNotification(
+            user_id=user.id,
+            template_id=template.id,
+        )
+
+        db.add(notification)
+        db.flush()  # não commit ainda
+
+        notifications.append(notification)
+
+    db.commit()
+
+    return notifications

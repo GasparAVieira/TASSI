@@ -9,6 +9,8 @@ from app.database import Base, engine
 from app.routers import auth, buildings, locations, navigation, paths, rooms, users, diary_entries, notifications, notification_socket, epoc_session, epoc_router, admin_diary, admin_users
 from app.jobs.notification_scheduler import notification_scheduler_loop
 
+from app.notifications import rules
+
 Base.metadata.create_all(bind=engine)
 
 @asynccontextmanager
@@ -29,6 +31,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8000",
+        "http://localhost:5500",
         "https://tassi.onrender.com:",
     ],
     allow_credentials=True,

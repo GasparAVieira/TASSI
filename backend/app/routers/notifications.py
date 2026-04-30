@@ -14,6 +14,7 @@ from app.services.notification_service import (
     dismiss_notification,
     serialize_user_notification,
     create_user_notification_if_not_sent_today,
+    test_all_notifications_for_user,
 )
 
 router = APIRouter(prefix="/api/v1/notifications", tags=["Notifications"])
@@ -106,3 +107,32 @@ async def send_diary_reminder(
     )
 
     return payload
+
+@router.post("/test-all")
+async def test_all_notifications(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    notifications = test_all_notifications_for_user(db, current_user)
+
+    language = current_user.preferred_language
+
+    results = []
+
+    for notification in notifications:
+        payload = serialize_user_notification(notification, language)
+
+        results.append(payload)
+
+        await notification_manager.send_to_user(
+            user_id=current_user.id,
+            payload={
+                "event": "notification.created",
+                "data": payload,
+            },
+        )
+
+    return {
+        "sent": len(results),
+        "notifications": results,
+    }
