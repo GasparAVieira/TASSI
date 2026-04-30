@@ -10,6 +10,7 @@ class RoomBase(BaseModel):
     code: str
     name: str
     floor: int
+    mp_url: str | None = None
 
 
 class RoomCreate(RoomBase):
@@ -22,6 +23,7 @@ class RoomUpdate(BaseModel):
     code: str | None = None
     name: str | None = None
     floor: int | None = None
+    mp_url: str | None = None
 
 
 class RoomResponse(RoomBase):

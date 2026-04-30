@@ -39,6 +39,7 @@ class Room(Base):
     code: Mapped[str] = mapped_column(Text, nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     floor: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    mp_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
