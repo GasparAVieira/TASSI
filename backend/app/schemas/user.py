@@ -11,7 +11,6 @@ class UserBase(BaseModel):
     email: EmailStr
     phone: str | None = None
     bio: str | None = None
-    role: UserRole = UserRole.user
     accessibility_profile: AccessibilityProfile = AccessibilityProfile.none
     preferred_language: Language = Language.pt
     audio_guidance: bool = False
@@ -26,14 +25,18 @@ class UserUpdate(BaseModel):
     email: EmailStr | None = None
     phone: str | None = None
     bio: str | None = None
-    role: UserRole | None = None
     accessibility_profile: AccessibilityProfile | None = None
     preferred_language: Language | None = None
     audio_guidance: bool | None = None
 
 
+class RoleUpdate(BaseModel):
+    role: UserRole
+
+
 class UserResponse(UserBase):
     id: UUID
+    role: UserRole
     created_at: datetime
     updated_at: datetime
 

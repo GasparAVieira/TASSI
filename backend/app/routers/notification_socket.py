@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from jose import JWTError, jwt
 
@@ -30,13 +32,14 @@ async def notifications_websocket(
                 await websocket.close(code=1008)
                 return
 
-            user = db.query(User).filter(User.id == user_id).first()
+            user_uuid = uuid.UUID(user_id)
+            user = db.query(User).filter(User.id == user_uuid).first()
 
             if user is None:
                 await websocket.close(code=1008)
                 return
 
-        except JWTError:
+        except (JWTError, ValueError):
             await websocket.close(code=1008)
             return
 

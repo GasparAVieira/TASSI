@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.enums import UserRole
 from app.core.security import create_access_token, hash_password, verify_password
 from app.database import get_db
 from app.models.user import User
@@ -21,7 +22,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
         password_hash=hash_password(payload.password),
         phone=payload.phone,
         bio=payload.bio,
-        role=payload.role,
+        role=UserRole.user,
         accessibility_profile=payload.accessibility_profile,
         preferred_language=payload.preferred_language,
         audio_guidance=payload.audio_guidance,

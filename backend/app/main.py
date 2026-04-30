@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.database import Base, engine
-from app.routers import auth, buildings, locations, navigation, paths, rooms, users, diary_entries, notifications, notification_socket, epoc_session, epoc_router
+from app.routers import auth, buildings, locations, navigation, paths, rooms, users, diary_entries, notifications, notification_socket, epoc_session, epoc_router, admin_diary, admin_users
 from app.jobs.notification_scheduler import notification_scheduler_loop
 
 Base.metadata.create_all(bind=engine)
@@ -52,3 +52,5 @@ app.include_router(notifications.router)
 app.include_router(notification_socket.router)
 app.include_router(epoc_router.router)
 app.include_router(epoc_session.router)
+app.include_router(admin_diary.router)
+app.include_router(admin_users.router)

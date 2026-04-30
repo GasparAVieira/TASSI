@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal
 
 from app.schemas.diary_media import DiaryMediaCreate, DiaryMediaResponse
+from app.schemas.diary_entry_comment import DiaryEntryCommentResponse
 
 
 class DiaryEntryCreate(BaseModel):
@@ -53,6 +54,7 @@ class DiaryEntryResponse(BaseModel):
     updated_at: datetime
 
     media_items: list[DiaryMediaResponse] = Field(default_factory=list)
+    comments: list[DiaryEntryCommentResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
