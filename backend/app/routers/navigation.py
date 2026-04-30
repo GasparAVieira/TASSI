@@ -14,6 +14,7 @@ from app.core.enums import Language
 from app.services.routing_service import select_instruction
 
 from app.core.enums import AccessibilityProfile
+from backend.app.models.location import Location
 
 router = APIRouter(prefix="/api/v1/navigation", tags=["Navigation"])
 
@@ -58,3 +59,46 @@ def get_next_step(
         return {"message": "Already at destination"}
 
     return route.steps[0]
+
+@router.get("/beacon-next")
+def get_next_step_from_beacon(
+    beacon_uuid: UUID,
+    target_location_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    location = (
+        db.query(Location)
+        .filter(
+            Location.beacon_uuid == beacon_uuid,
+        )
+        .first()
+    )
+
+    if not location:
+        raise HTTPException(
+            status_code=404,
+            detail="Beacon location not found",
+        )
+
+    try:
+        route = calculate_route(
+            db=db,
+            from_location_id=location.id,
+            to_location_id=target_location_id,
+            user=current_user,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        )
+
+    if not route.steps:
+        return {"message": "Already at destination"}
+
+    return {
+        "current_location_id": location.id,
+        "current_location_name": location.name,
+        "next_step": route.steps[0],
+    }

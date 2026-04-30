@@ -6,6 +6,10 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+    <string>Needed to scan for navigation beacons</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Needed to detect nearby beacons</string>
 	<key>CFBundleDisplayName</key>
 	<string>Navigation Diary</string>
 	<key>CFBundleExecutable</key>

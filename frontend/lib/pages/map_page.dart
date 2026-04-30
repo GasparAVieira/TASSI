@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../l10n/app_localizations.dart';
+import '../services/beacon_service.dart';
 
 class MapPage extends StatefulWidget {
   final VoidCallback? onOpenSettings;
@@ -11,6 +13,19 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
+  final BeaconService beaconService = BeaconService(
+    targetLocationId: "f6dbc5e3-f901-4799-ba06-c23deb71a4b5",
+  );
+
+  BeaconDevice? currentBeacon;
+  bool scanning = false;
+
+  String currentInstruction = "";
+  String currentLocationName = "";
+
+  StreamSubscription? _beaconSub;
+  StreamSubscription? _navigationSub;
+
   String selectedFloor = 'F1';
   final List<String> floors = ['F3', 'F2', 'F1'];
   bool isLegendVisible = false;
@@ -24,10 +39,49 @@ class _MapPageState extends State<MapPage> {
     _floorScrollController = FixedExtentScrollController(
       initialItem: floors.indexOf(selectedFloor),
     );
+
+    Future.delayed(Duration(seconds: 2), () {
+      setState(() {
+        currentInstruction = "TESTE: instrução a funcionar";
+        print("TESTE: instrução a funcionar");
+      });
+    });
+
+    Future.microtask(() async {
+      await beaconService.startScanning();
+      setState(() => scanning = true);
+    });
+
+    _beaconSub = beaconService.stream.listen((beacon) async {
+      setState(() {
+        currentBeacon = beacon;
+      });
+    });
+
+    _navigationSub = beaconService.navigationStream.listen((data) {
+      print("NAV RECEBIDO: $data");
+
+      setState(() {
+        currentInstruction = "TESTE FORÇADO";
+      });
+    });
+  }
+
+  Future<void> startScan() async {
+    await beaconService.startScanning();
+    setState(() => scanning = true);
+  }
+
+  Future<void> stopScan() async {
+    await beaconService.stopScanning();
+    setState(() => scanning = false);
   }
 
   @override
   void dispose() {
+    _beaconSub?.cancel();
+    _navigationSub?.cancel();
+    beaconService.dispose();
     _floorScrollController.dispose();
     super.dispose();
   }
@@ -58,6 +112,52 @@ class _MapPageState extends State<MapPage> {
             ),
           ),
 
+          if (currentInstruction.isNotEmpty)
+            Positioned(
+              bottom: 80,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.navigation,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: Text(
+                        currentInstruction,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
           // Top Right: Sidebar content and controls
           Positioned(
@@ -143,8 +243,8 @@ class _MapPageState extends State<MapPage> {
                                       );
                                     },
                                     icon: const Icon(Icons.keyboard_arrow_up, size: 20),
-                                    color: isAtTop 
-                                        ? theme.colorScheme.primary.withValues(alpha: 0.2) 
+                                    color: isAtTop
+                                        ? theme.colorScheme.primary.withValues(alpha: 0.2)
                                         : theme.colorScheme.primary,
                                   ),
                                   Expanded(
@@ -185,8 +285,8 @@ class _MapPageState extends State<MapPage> {
                                       );
                                     },
                                     icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                                    color: isAtBottom 
-                                        ? theme.colorScheme.primary.withValues(alpha: 0.2) 
+                                    color: isAtBottom
+                                        ? theme.colorScheme.primary.withValues(alpha: 0.2)
                                         : theme.colorScheme.primary,
                                   ),
                                 ],

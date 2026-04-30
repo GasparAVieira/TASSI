@@ -23,6 +23,7 @@ dependencies:
   shared_preferences: ^2.5.5
   web_socket_channel: ^2.4.0
   webview_flutter: ^4.10.0
+  flutter_blue_plus: ^1.32.7
 
 dev_dependencies:
   flutter_test:
