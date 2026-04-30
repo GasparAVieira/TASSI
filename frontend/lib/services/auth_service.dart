@@ -27,6 +27,7 @@ class AuthService extends ChangeNotifier {
 
   static const String dummyEmail = 'd@e.com';
   static const String dummyPassword = 'password';
+  static const String dummyToken = 'dummy_token';
 
   bool _isLoggedIn = false;
   String? _userName;
@@ -250,15 +251,58 @@ class AuthService extends ChangeNotifier {
     String? fullName,
     String? phone,
     String? bio,
+    AccessibilityProfile? accessibilityProfile,
   }) async {
-    _userName = fullName ?? _userName;
-    _phone = phone ?? _phone;
-    _bio = bio ?? _bio;
+    if (fullName != null) _userName = fullName;
+    if (phone != null) _phone = phone;
+    if (bio != null) _bio = bio;
+    if (accessibilityProfile != null) {
+      _accessibilityProfile = accessibilityProfile;
+      await SettingsService().setAccessibilityProfile(accessibilityProfile);
+    }
+
+    final updatePayload = <String, dynamic>{};
+    if (fullName != null) updatePayload['full_name'] = fullName.trim();
+    if (phone != null) updatePayload['phone'] = phone.trim();
+    if (bio != null) updatePayload['bio'] = bio.trim();
+    if (accessibilityProfile != null) {
+      updatePayload['accessibility_profile'] = accessibilityProfile.serverValue;
+    }
+
+    if (_token != null && _token != dummyToken && updatePayload.isNotEmpty) {
+      try {
+        final response = await http.patch(
+          Uri.parse(ApiClient.url('/api/v1/users/me')),
+          headers: authHeaders(),
+          body: jsonEncode(updatePayload),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          _userName = data['full_name'] as String? ?? _userName;
+          _phone = data['phone'] as String? ?? _phone;
+          _bio = data['bio'] as String? ?? _bio;
+          _accessibilityProfile = AccessibilityProfile.fromServerValue(
+            data['accessibility_profile'] as String?,
+          );
+        } else {
+          debugPrint('Profile update failed: ${response.statusCode} ${response.body}');
+        }
+      } catch (e) {
+        debugPrint('Profile update request error: $e');
+      }
+    }
 
     final prefs = await SharedPreferences.getInstance();
     if (_userName != null) await prefs.setString(_userNameKey, _userName!);
     if (_phone != null) await prefs.setString(_userPhoneKey, _phone!);
     if (_bio != null) await prefs.setString(_userBioKey, _bio!);
+    if (_accessibilityProfile != null) {
+      await prefs.setString(
+        _userProfileKey,
+        _accessibilityProfile!.serverValue,
+      );
+    }
 
     notifyListeners();
   }

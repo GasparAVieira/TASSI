@@ -71,6 +71,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Required for capturing video sound';
 
   @override
+  String get permissionNotifications => 'Notifications';
+
+  @override
+  String get permissionNotificationsSubtitle =>
+      'Required for receiving push notifications';
+
+  @override
   String get permissionLocation => 'Location';
 
   @override
@@ -116,7 +123,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Prioritize Wheelchair Accessible Routes';
 
   @override
-  String get connectEmotiv => 'Connect to Emotiv EPOC';
+  String get connectEmotiv => 'Connect to Emotiv EPOC+';
 
   @override
   String get connectBluetoothSubtitle => 'Connect via Bluetooth';
@@ -331,11 +338,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navProfile => 'Profile';
 
   @override
-  String get sessionExpiredLogoutMessage =>
-      'You have been logged out because your session expired.';
+  String get sessionExpiredLogoutMessage => 'Your session expired.';
 
   @override
-  String get goToProfile => 'Go to Profile';
+  String get goToProfile => 'Login';
 
   @override
   String get faqSubtitle => 'Frequently Asked Questions';
@@ -381,4 +387,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pulsingBadgesSubtitle => 'Allows notifications to pulse';
+
+  @override
+  String get connect => 'Connect';
+
+  @override
+  String get disconnect => 'Disconnect';
+
+  @override
+  String instruction(String command) {
+    return 'Instruction: $command';
+  }
+
+  @override
+  String get attention => 'Attention';
+
+  @override
+  String get engagement => 'Engagement';
+
+  @override
+  String get excitement => 'Excitement';
+
+  @override
+  String get stress => 'Stress';
+
+  @override
+  String get relaxation => 'Relaxation';
+
+  @override
+  String get interest => 'Interest';
 }

@@ -1,12 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'api_client.dart';
+import 'auth_service.dart';
 
-class EpocService {
+class EpocService extends ChangeNotifier {
+  static final EpocService _instance = EpocService._internal();
+  factory EpocService() => _instance;
+  EpocService._internal();
+
   String clientId = "Om3eDEF94UvFy3slqD7Uq6EozgbaYeVihkPdIBTM";
   String clientSecret = "YKpxxjDo1hpA19cL13gS3uPgwzukWk9OvFDvXQmDGMR9FfJwr3YTwWl0zvHgYTgkx0JQtudtWkyLKgHZ8fTj3xpbspY664sIYQSAktrT38bWrZED8RrUMqfquwg7hlZd";
 
@@ -20,9 +26,15 @@ class EpocService {
   String? _sessionId;
 
   bool _running = false;
-  Timer? _dbTimer;
+  bool get isRunning => _running;
 
-  Map<String, dynamic> lastMetrics = {
+  bool _isSimulated = false;
+  bool get isSimulated => _isSimulated;
+
+  Timer? _dbTimer;
+  Timer? _dummyTimer;
+
+  Map<String, double?> lastMetrics = {
     "attention": null,
     "engagement": null,
     "excitement": null,
@@ -33,16 +45,17 @@ class EpocService {
 
   String? lastCommand;
 
-  final StreamController<Map<String, dynamic>> _controller =
-  StreamController.broadcast();
+  final StreamController<Map<String, dynamic>> _controller = StreamController.broadcast();
 
   Stream<Map<String, dynamic>> get stream => _controller.stream;
 
-  EpocService({
-    required this.clientId,
-    required this.clientSecret,
-    required this.authToken,
-  });
+  /*
+    EpocService({
+      required this.clientId,
+      required this.clientSecret,
+      required this.authToken,
+    });
+  */
 
   // ---------------- CONNECT ----------------
   Future<void> connect() async {
@@ -63,8 +76,12 @@ class EpocService {
     }));
   }
 
-  // ---------------- FLOW ----------------
+  // ---------------- REAL EPOC+ FLOW ----------------
+  // This is the intended path for an actual headset connection.
+  // Once the correct EPOC implementation is wired, this method should be used
+  // by the UI instead of the simulated fallback.
   Future<void> start() async {
+    _isSimulated = false;
     await connect();
 
     requestAccess();
@@ -72,7 +89,37 @@ class EpocService {
     queryHeadsets();
 
     _running = true;
-    _dbTimer = Timer.periodic(Duration(seconds: 10), (_) async {
+    notifyListeners();
+    _startDbTimer();
+  }
+
+  // ---------------- SIMULATED / FALLBACK FLOW ----------------
+  /// Dummy start for UI testing without the EPOC+ connected.
+  ///
+  /// This method generates synthetic metrics and commands locally.
+  /// Keep it separated from the real EPOC flow so the actual implementation
+  /// can be swapped in cleanly later.
+  Future<void> startDummy() async {
+    _isSimulated = true;
+    _running = true;
+    notifyListeners();
+    _dummyTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      _generateFallbackMetrics();
+      lastCommand = ["NEUTRAL", "PUSH", "PULL", "LEFT", "RIGHT"][Random().nextInt(5)];
+      
+      final packet = {
+        "command": lastCommand,
+        ...lastMetrics,
+      };
+      _controller.add(packet);
+      notifyListeners();
+    });
+
+    _startDbTimer();
+  }
+
+  void _startDbTimer() {
+    _dbTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
       if (_running) {
         await sendEpocSession();
       }
@@ -165,11 +212,12 @@ class EpocService {
       _generateFallbackMetrics();
     }
 
-    // EMIT (equivalente ao DB insert no backend)
+    // EMIT (Equivalent to DB Insert in the Backend)
     _controller.add({
       "command": lastCommand,
       ...lastMetrics,
     });
+    notifyListeners();
   }
 
   // ---------------- RPC HANDLER ----------------
@@ -196,8 +244,21 @@ class EpocService {
   // ---------------- STOP ----------------
   void stop() {
     _running = false;
+    _isSimulated = false;
     _dbTimer?.cancel();
+    _dummyTimer?.cancel();
     _channel?.sink.close();
+    
+    // Clear metrics
+    lastMetrics.forEach((key, value) => lastMetrics[key] = null);
+    lastCommand = null;
+    
+    _controller.add({
+      "command": null,
+      ...lastMetrics,
+    });
+    
+    notifyListeners();
   }
 
   void _generateFallbackMetrics() {
@@ -212,6 +273,9 @@ class EpocService {
   }
 
   Future<void> sendEpocSession() async {
+    final authToken = AuthService.instance.token;
+    if (authToken == null) return;
+
     try {
       final response = await http.post(
         Uri.parse(ApiClient.url("/api/v1/epoc-sessions/")),

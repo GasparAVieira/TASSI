@@ -441,16 +441,36 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
         if (l10n == null) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.sessionExpiredLogoutMessage),
-            action: SnackBarAction(
-              label: l10n.goToProfile,
-              onPressed: () {
-                if (!mounted) return;
-                setState(() {
-                  currentPageIndex = 3;
-                  profileInitialTabIndex = 0;
-                });
-              },
+            content: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.sessionExpiredLogoutMessage,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (!mounted) return;
+                    setState(() {
+                      currentPageIndex = 3;
+                      profileInitialTabIndex = 0;
+                    });
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.primary,
+                    minimumSize: Size.zero,
+                    padding: EdgeInsets.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    l10n.goToProfile,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
             behavior: SnackBarBehavior.floating,
           ),

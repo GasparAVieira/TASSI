@@ -10,6 +10,7 @@ import '../services/auth_service.dart';
 import '../models/accessibility_profile.dart';
 import '../services/settings_service.dart';
 import '../services/accessibility_profile_service.dart';
+import '../services/epoc_service.dart';
 import '../widgets/auth_widgets.dart';
 import '../widgets/accessibility_profile_picker.dart';
 import '../widgets/profile_widgets.dart';
@@ -314,6 +315,7 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
       fullName: _profileNameController.text.trim(),
       phone: rawPhone,
       bio: _profileBioController.text.trim(),
+      accessibilityProfile: _authService.accessibilityProfile ?? AccessibilityProfile.None,
     );
     await _syncProfileControllers();
   }
@@ -590,9 +592,12 @@ class _SettingsTabContent extends StatefulWidget {
 class _SettingsTabContentState extends State<_SettingsTabContent> {
   final AuthService _authService = AuthService();
   final SettingsService _settings = SettingsService();
+  bool _showEpocPanel = false;
+  bool _showPercentages = false;
 
   PermissionStatus _cameraPermissionStatus = PermissionStatus.denied;
   PermissionStatus _microphonePermissionStatus = PermissionStatus.denied;
+  PermissionStatus _notificationPermissionStatus = PermissionStatus.denied;
   PermissionStatus _galleryPermissionStatus = PermissionStatus.denied;
   PermissionStatus _locationPermissionStatus = PermissionStatus.denied;
 
@@ -610,6 +615,20 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
 
   void _onSettingsChanged() {
     if (mounted) setState(() {});
+  }
+
+  Future<void> _handlePushNotificationsChanged(bool value) async {
+    if (!value) {
+      await _settings.setPushNotificationsEnabled(false);
+      return;
+    }
+
+    final granted = await _requestPermission(
+      Permission.notification,
+      'notifications',
+    );
+
+    await _settings.setPushNotificationsEnabled(granted);
   }
 
   void _showLanguageBottomSheet(BuildContext context) {
@@ -988,8 +1007,9 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                   subtitle: l10n.pushNotificationsSubtitle,
                   icon: Icons.notifications_active_outlined,
                   value: _settings.pushNotificationsEnabled,
-                  onChanged: (val) =>
-                      _settings.setPushNotificationsEnabled(val),
+                  onChanged: (val) {
+                    _handlePushNotificationsChanged(val);
+                  },
                 ),
                 const Divider(height: 1),
                 _buildActionTile(
@@ -1054,8 +1074,16 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                   title: l10n.connectEmotiv,
                   subtitle: l10n.connectBluetoothSubtitle,
                   icon: Icons.bluetooth,
-                  onTap: () {},
+                  onTap: () {
+                    setState(() {
+                      _showEpocPanel = !_showEpocPanel;
+                    });
+                  },
                 ),
+                if (_showEpocPanel) ...[
+                  const Divider(height: 1),
+                  _buildEpocPanel(context),
+                ],
               ],
             ),
             const SizedBox(height: 20),
@@ -1301,6 +1329,135 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
     );
   }
 
+  Widget _buildEpocPanel(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final epocService = EpocService();
+
+    return ListenableBuilder(
+      listenable: epocService,
+      builder: (context, _) {
+        final isRunning = epocService.isRunning;
+        final metrics = epocService.lastMetrics;
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        if (isRunning) {
+                          epocService.stop();
+                        } else {
+                          epocService.startDummy();
+                        }
+                      },
+                      icon: Icon(isRunning ? Icons.stop : Icons.play_arrow),
+                      label: Text(isRunning ? l10n.disconnect : l10n.connect),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: isRunning ? theme.colorScheme.error : null,
+                        foregroundColor: isRunning ? theme.colorScheme.onError : null,
+                      ),
+                    ),
+                  ),
+                  if (isRunning) ...[
+                    const SizedBox(width: 8),
+                    IconButton.filledTonal(
+                      onPressed: () {
+                        setState(() {
+                          _showPercentages = !_showPercentages;
+                        });
+                      },
+                      icon: Icon(_showPercentages ? Icons.abc : Icons.percent),
+                      tooltip: _showPercentages ? "Show Codes" : "Show Percentages",
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 3,
+                mainAxisSpacing: 0,
+                crossAxisSpacing: 8,
+                childAspectRatio: 1.25,
+                children: [
+                  _EpocMetricCircle(
+                    label: l10n.attention,
+                    code: 'AT',
+                    value: metrics['attention'],
+                    color: Colors.blue,
+                    enabled: isRunning,
+                    showPercentage: _showPercentages,
+                  ),
+                  _EpocMetricCircle(
+                    label: l10n.engagement,
+                    code: 'EN',
+                    value: metrics['engagement'],
+                    color: Colors.green,
+                    enabled: isRunning,
+                    showPercentage: _showPercentages,
+                  ),
+                  _EpocMetricCircle(
+                    label: l10n.excitement,
+                    code: 'EX',
+                    value: metrics['excitement'],
+                    color: Colors.orange,
+                    enabled: isRunning,
+                    showPercentage: _showPercentages,
+                  ),
+                  _EpocMetricCircle(
+                    label: l10n.stress,
+                    code: 'ST',
+                    value: metrics['stress'],
+                    color: Colors.red,
+                    enabled: isRunning,
+                    showPercentage: _showPercentages,
+                  ),
+                  _EpocMetricCircle(
+                    label: l10n.relaxation,
+                    code: 'RE',
+                    value: metrics['relaxation'],
+                    color: Colors.teal,
+                    enabled: isRunning,
+                    showPercentage: _showPercentages,
+                  ),
+                  _EpocMetricCircle(
+                    label: l10n.interest,
+                    code: 'IN',
+                    value: metrics['interest'],
+                    color: Colors.purple,
+                    enabled: isRunning,
+                    showPercentage: _showPercentages,
+                  ),
+                ],
+              ),
+              Center(
+                child: Text(
+                  l10n.instruction(epocService.lastCommand ?? '---'),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isRunning ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+              // No dummy indicator shown in the UI; the service currently uses
+              // either the real EPOC flow or the fallback simulation internally.
+              if (isRunning) ...[
+                 const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _openAppSettings() async {
     final opened = await openAppSettings();
     if (!opened) {
@@ -1386,6 +1543,21 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                         const Divider(height: 1),
                         _buildPermissionTile(
                           context,
+                          title: l10n.permissionNotifications,
+                          subtitle: l10n.permissionNotificationsSubtitle,
+                          status: _notificationPermissionStatus,
+                          onPressed: () async {
+                            await _requestPermission(
+                              Permission.notification,
+                              'notifications',
+                            );
+                            await _refreshPermissionStatuses();
+                            setModalState(() {});
+                          },
+                        ),
+                        const Divider(height: 1),
+                        _buildPermissionTile(
+                          context,
                           title: l10n.permissionLocation,
                           subtitle: l10n.permissionLocationSubtitle,
                           status: _locationPermissionStatus,
@@ -1437,6 +1609,7 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
   Future<void> _refreshPermissionStatuses() async {
     final cameraStatus = await Permission.camera.status;
     final microphoneStatus = await Permission.microphone.status;
+    final notificationStatus = await Permission.notification.status;
     final locationStatus = await Permission.location.status;
     final galleryStatus = await _getGalleryPermissionStatus();
 
@@ -1444,6 +1617,7 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
     setState(() {
       _cameraPermissionStatus = cameraStatus;
       _microphonePermissionStatus = microphoneStatus;
+      _notificationPermissionStatus = notificationStatus;
       _locationPermissionStatus = locationStatus;
       _galleryPermissionStatus = galleryStatus;
     });
@@ -1498,23 +1672,6 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
       final status = await permission.request();
       if (status.isGranted) return true;
       if (!mounted) return false;
-
-      if (status.isPermanentlyDenied) {
-        final message = permission == Permission.location
-            ? 'Location permission is required. Open settings to enable it.'
-            : 'Permission denied. Open settings to enable $name.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            behavior: SnackBarBehavior.floating,
-            action: SnackBarAction(
-              label: AppLocalizations.of(context)!.openAppSettings,
-              onPressed: openAppSettings,
-            ),
-          ),
-        );
-        return false;
-      }
 
       final deniedMessage = permission == Permission.location
           ? 'Location permission is required to use this app.'
@@ -1602,6 +1759,77 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
         ],
       ),
       onTap: onTap,
+    );
+  }
+}
+
+class _EpocMetricCircle extends StatelessWidget {
+  final String label;
+  final String code;
+  final double? value;
+  final Color color;
+  final bool enabled;
+  final bool showPercentage;
+
+  const _EpocMetricCircle({
+    required this.label,
+    required this.code,
+    required this.value,
+    required this.color,
+    required this.enabled,
+    required this.showPercentage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final displayValue = value ?? 0.0;
+    final opacity = enabled ? 1.0 : 0.3;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          tween: Tween<double>(begin: 0, end: displayValue),
+          builder: (context, val, child) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 50,
+                  height: 50,
+                  child: CircularProgressIndicator(
+                    value: val,
+                    strokeWidth: 4,
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5 * opacity),
+                    valueColor: AlwaysStoppedAnimation<Color>(color.withValues(alpha: opacity)),
+                  ),
+                ),
+                Text(
+                  showPercentage ? "${(val * 100).toInt()}%" : code,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: showPercentage ? 11 : null,
+                    color: theme.colorScheme.onSurface.withValues(alpha: opacity),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: opacity),
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 }

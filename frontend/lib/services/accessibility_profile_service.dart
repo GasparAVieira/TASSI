@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/accessibility_profile.dart';
+import 'auth_service.dart';
 import 'settings_service.dart';
 
 class AccessibilityProfileService extends ChangeNotifier {
@@ -65,6 +66,9 @@ class AccessibilityProfileService extends ChangeNotifier {
   Future<void> applyProfile() async {
     final profile = selectedProfile;
     await _settings.setAccessibilityProfile(profile);
+    await AuthService.instance.updateLocalProfile(
+      accessibilityProfile: profile,
+    );
 
     switch (profile) {
       case AccessibilityProfile.Wheelchair:

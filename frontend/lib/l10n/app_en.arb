@@ -18,6 +18,8 @@
   "permissionCameraSubtitle": "Required for taking new images or videos",
   "permissionMicrophone": "Microphone",
   "permissionMicrophoneSubtitle": "Required for capturing video sound",
+  "permissionNotifications": "Notifications",
+  "permissionNotificationsSubtitle": "Required for receiving push notifications",
   "permissionLocation": "Location",
   "permissionLocationSubtitle": "Required to get your current coordinates",
   "permissionGallery": "Photo Library",
@@ -32,7 +34,7 @@
   "mobility": "Mobility",
   "wheelchairRoutes": "Wheelchair Routes",
   "wheelchairRoutesSubtitle": "Prioritize Wheelchair Accessible Routes",
-  "connectEmotiv": "Connect to Emotiv EPOC",
+  "connectEmotiv": "Connect to Emotiv EPOC+",
   "connectBluetoothSubtitle": "Connect via Bluetooth",
   "navigationAudio": "Navigation & Audio",
   "audioFeedback": "Audio Feedback",
@@ -108,8 +110,8 @@
   "navGoTo": "Go To",
   "navDiary": "Diary",
   "navProfile": "Profile",
-  "sessionExpiredLogoutMessage": "You have been logged out because your session expired.",
-  "goToProfile": "Go to Profile",
+  "sessionExpiredLogoutMessage": "Your session expired.",
+  "goToProfile": "Login",
   "faqSubtitle": "Frequently Asked Questions",
   "themeSystem": "System",
   "themeLight": "Light",
@@ -124,5 +126,21 @@
   "enableAnimations": "Enable Animations",
   "enableAnimationsSubtitle": "Controls transitions and UI effects",
   "pulsingBadges": "Pulsing Badges",
-  "pulsingBadgesSubtitle": "Allows notifications to pulse"
+  "pulsingBadgesSubtitle": "Allows notifications to pulse",
+  "connect": "Connect",
+  "disconnect": "Disconnect",
+  "instruction": "Instruction: {command}",
+  "@instruction": {
+    "placeholders": {
+      "command": {
+        "type": "String"
+      }
+    }
+  },
+  "attention": "Attention",
+  "engagement": "Engagement",
+  "excitement": "Excitement",
+  "stress": "Stress",
+  "relaxation": "Relaxation",
+  "interest": "Interest"
 }

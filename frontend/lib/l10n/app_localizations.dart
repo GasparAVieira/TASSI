@@ -212,6 +212,18 @@ abstract class AppLocalizations {
   /// **'Required for capturing video sound'**
   String get permissionMicrophoneSubtitle;
 
+  /// No description provided for @permissionNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get permissionNotifications;
+
+  /// No description provided for @permissionNotificationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Required for receiving push notifications'**
+  String get permissionNotificationsSubtitle;
+
   /// No description provided for @permissionLocation.
   ///
   /// In en, this message translates to:
@@ -299,7 +311,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectEmotiv.
   ///
   /// In en, this message translates to:
-  /// **'Connect to Emotiv EPOC'**
+  /// **'Connect to Emotiv EPOC+'**
   String get connectEmotiv;
 
   /// No description provided for @connectBluetoothSubtitle.
@@ -713,13 +725,13 @@ abstract class AppLocalizations {
   /// No description provided for @sessionExpiredLogoutMessage.
   ///
   /// In en, this message translates to:
-  /// **'You have been logged out because your session expired.'**
+  /// **'Your session expired.'**
   String get sessionExpiredLogoutMessage;
 
   /// No description provided for @goToProfile.
   ///
   /// In en, this message translates to:
-  /// **'Go to Profile'**
+  /// **'Login'**
   String get goToProfile;
 
   /// No description provided for @faqSubtitle.
@@ -811,6 +823,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Allows notifications to pulse'**
   String get pulsingBadgesSubtitle;
+
+  /// No description provided for @connect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get connect;
+
+  /// No description provided for @disconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get disconnect;
+
+  /// No description provided for @instruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Instruction: {command}'**
+  String instruction(String command);
+
+  /// No description provided for @attention.
+  ///
+  /// In en, this message translates to:
+  /// **'Attention'**
+  String get attention;
+
+  /// No description provided for @engagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Engagement'**
+  String get engagement;
+
+  /// No description provided for @excitement.
+  ///
+  /// In en, this message translates to:
+  /// **'Excitement'**
+  String get excitement;
+
+  /// No description provided for @stress.
+  ///
+  /// In en, this message translates to:
+  /// **'Stress'**
+  String get stress;
+
+  /// No description provided for @relaxation.
+  ///
+  /// In en, this message translates to:
+  /// **'Relaxation'**
+  String get relaxation;
+
+  /// No description provided for @interest.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest'**
+  String get interest;
 }
 
 class _AppLocalizationsDelegate
