@@ -331,6 +331,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navProfile => 'Profile';
 
   @override
+  String get sessionExpiredLogoutMessage =>
+      'You have been logged out because your session expired.';
+
+  @override
+  String get goToProfile => 'Go to Profile';
+
+  @override
   String get faqSubtitle => 'Frequently Asked Questions';
 
   @override

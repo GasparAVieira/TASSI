@@ -500,11 +500,13 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
               passwordController: _passwordController,
               confirmPasswordController: _confirmPasswordController,
               onSignup: (name, email, password, confirmPassword) async {
+                final accessibilityService = AccessibilityProfileService();
                 final success = await _authService.signup(
                   name,
                   email,
                   password,
                   confirmPassword,
+                  accessibilityService.selectedProfile,
                 );
                 if (success) {
                   _nameController.clear();

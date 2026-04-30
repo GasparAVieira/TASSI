@@ -710,6 +710,18 @@ abstract class AppLocalizations {
   /// **'Profile'**
   String get navProfile;
 
+  /// No description provided for @sessionExpiredLogoutMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You have been logged out because your session expired.'**
+  String get sessionExpiredLogoutMessage;
+
+  /// No description provided for @goToProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Profile'**
+  String get goToProfile;
+
   /// No description provided for @faqSubtitle.
   ///
   /// In en, this message translates to:

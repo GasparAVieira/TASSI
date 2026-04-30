@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../widgets/notification_popup.dart';
+import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../services/diary_service.dart';
+import '../services/notification_service.dart';
 import '../models/diary_entry.dart';
 import 'diary_entry.dart';
 import '../widgets/diary_entry_widgets.dart';
@@ -26,6 +28,7 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
   final GlobalKey _newEntryKey = GlobalKey();
   final SettingsService _settings = SettingsService();
   final DiaryService _diaryService = DiaryService();
+  final NotificationService _notificationService = NotificationService();
   final bool _isAttachmentProcessing = false;
   bool _isLoadingEntries = true;
 
@@ -43,7 +46,16 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
       }
     });
     _settings.addListener(_onSettingsChanged);
+    _notificationService.addListener(_onNotificationChanged);
+    _diaryService.addListener(_onDiaryServiceChanged);
     _loadDiaryEntries();
+    if (AuthService.instance.isLoggedIn) {
+      _notificationService.fetchNotifications();
+    }
+  }
+
+  void _onNotificationChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadDiaryEntries() async {
@@ -76,11 +88,20 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
   void dispose() {
     _tabController.dispose();
     _settings.removeListener(_onSettingsChanged);
+    _notificationService.removeListener(_onNotificationChanged);
+    _diaryService.removeListener(_onDiaryServiceChanged);
     super.dispose();
   }
 
   void _onSettingsChanged() {
     if (mounted) setState(() {});
+  }
+
+  void _onDiaryServiceChanged() {
+    if (!mounted) return;
+    setState(() {
+      _allEntries = _diaryService.entries;
+    });
   }
 
   List<DiaryEntry> get _filteredEntries {
@@ -404,9 +425,9 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const PulsingBadge(
-                    label: '3',
-                    child: Icon(Icons.notifications_outlined, size: 32),
+                  child: PulsingBadge(
+                    label: _notificationService.unreadCountDisplay,
+                    child: const Icon(Icons.notifications_outlined, size: 32),
                   ),
                 ),
               ),
@@ -842,8 +863,7 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
                                                   entry.badgeCount! > 0) ...[
                                                 const SizedBox(width: 8),
                                                 PulsingBadge(
-                                                  label: entry.badgeCount
-                                                      .toString(),
+                                                  label: entry.badgeCount! > 9 ? '9+' : entry.badgeCount.toString(),
                                                 ),
                                               ],
                                             ],

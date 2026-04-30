@@ -6,7 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_localizations.dart';
 import 'pages/welcome_page.dart';
 import 'services/auth_service.dart';
+import 'services/diary_service.dart';
 import 'services/settings_service.dart';
+import 'services/notification_service.dart';
 
 // Main Pages
 import 'pages/loading_screen.dart';
@@ -16,7 +18,18 @@ import 'pages/goto_page.dart';
 import 'pages/diary_page.dart';
 import 'pages/profile_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  final settings = SettingsService();
+  await settings.load();
+  
+  final authService = AuthService.instance;
+  await authService.loadSession();
+
+  final notificationService = NotificationService();
+  await notificationService.init();
+
   runApp(const MyApp());
 }
 
@@ -55,8 +68,6 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _loadInitialSettings() async {
-    await _authService.loadSession();
-    await _settings.load();
     if (!mounted) return;
 
     final authLanguage = _authService.preferredLanguageCode;
@@ -221,24 +232,39 @@ class RootPage extends StatefulWidget {
 class _RootPageState extends State<RootPage> {
   Future<bool>? _initialization;
   bool _showWelcome = false;
+  bool _hasSeenWelcome = false;
   PermissionStatus? _locationPermissionStatus;
 
   @override
   void initState() {
     super.initState();
+    AuthService.instance.addListener(_onAuthChanged);
     _initialization = _loadInitialState();
   }
 
+  @override
+  void dispose() {
+    AuthService.instance.removeListener(_onAuthChanged);
+    super.dispose();
+  }
+
   Future<bool> _loadInitialState() async {
-    await AuthService.instance.loadSession();
     final preferences = await SharedPreferences.getInstance();
-    final hasSeenWelcome = preferences.getBool('has_seen_welcome_page') ?? false;
+    _hasSeenWelcome = preferences.getBool('has_seen_welcome_page') ?? false;
     final isLoggedIn = AuthService.instance.isLoggedIn;
-    _showWelcome = !isLoggedIn && !hasSeenWelcome;
+    _showWelcome = !isLoggedIn && !_hasSeenWelcome;
     if (!_showWelcome) {
       await _refreshLocationPermission();
     }
     return _showWelcome;
+  }
+
+  void _onAuthChanged() {
+    if (!mounted) return;
+    final isLoggedIn = AuthService.instance.isLoggedIn;
+    setState(() {
+      _showWelcome = !isLoggedIn && !_hasSeenWelcome;
+    });
   }
 
   Future<void> _refreshLocationPermission() async {
@@ -364,18 +390,74 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
   int currentPageIndex = 0;
   int profileInitialTabIndex = 0;
   PermissionStatus? _locationPermissionStatus;
+  final NotificationService _notificationService = NotificationService();
+  final DiaryService _diaryService = DiaryService();
+  bool _wasLoggedIn = AuthService.instance.isLoggedIn;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _refreshLocationPermission();
+    _notificationService.addListener(_onNotificationChanged);
+    _diaryService.addListener(_onDiaryChanged);
+    AuthService.instance.addListener(_onAuthChanged);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _notificationService.removeListener(_onNotificationChanged);
+    _diaryService.removeListener(_onDiaryChanged);
+    AuthService.instance.removeListener(_onAuthChanged);
     super.dispose();
+  }
+
+  void _onNotificationChanged() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  void _onDiaryChanged() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  void _onAuthChanged() {
+    final isLoggedIn = AuthService.instance.isLoggedIn;
+    if (_wasLoggedIn && !isLoggedIn && NotificationService().sessionExpiredLogout) {
+      NotificationService().clearSessionExpiredLogout();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          currentPageIndex = 3;
+          profileInitialTabIndex = 0;
+        });
+        final l10n = AppLocalizations.of(context);
+        if (l10n == null) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.sessionExpiredLogoutMessage),
+            action: SnackBarAction(
+              label: l10n.goToProfile,
+              onPressed: () {
+                if (!mounted) return;
+                setState(() {
+                  currentPageIndex = 3;
+                  profileInitialTabIndex = 0;
+                });
+              },
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      });
+    }
+    _wasLoggedIn = isLoggedIn;
   }
 
   @override
@@ -468,6 +550,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
       );
     }
 
+    final hasDiaryUnreadMessages = _diaryService.hasUnreadMessages;
+    final hasAnyDiaryPageAlert = _notificationService.unreadCount > 0 || hasDiaryUnreadMessages;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -499,8 +584,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
               label: l10n.navGoTo,
             ),
             NavigationDestination(
-              selectedIcon: const Icon(Icons.book),
-              icon: const Icon(Icons.book_outlined),
+              selectedIcon: Badge(
+                label: null,
+                isLabelVisible: hasAnyDiaryPageAlert,
+                child: const Icon(Icons.book),
+              ),
+              icon: Badge(
+                label: null,
+                isLabelVisible: hasAnyDiaryPageAlert,
+                child: const Icon(Icons.book_outlined),
+              ),
               label: l10n.navDiary,
             ),
             NavigationDestination(

@@ -1,68 +1,49 @@
 import 'package:flutter/material.dart';
 import '../services/settings_service.dart';
+import '../services/notification_service.dart';
+import '../models/notification.dart';
 import 'diary_entry_widgets.dart';
 
-class NotificationData {
-  final String id;
-  final String title;
-  final String message;
-  final String timestamp;
-  final IconData icon;
-  final bool isUnread;
-
-  NotificationData({
-    required this.id,
-    required this.title,
-    required this.message,
-    required this.timestamp,
-    required this.icon,
-    required this.isUnread,
-  });
-}
-
-class NotificationPopup extends StatelessWidget {
+class NotificationPopup extends StatefulWidget {
   final double width;
   final double height;
   
   const NotificationPopup({super.key, required this.width, required this.height});
 
-  static final List<NotificationData> _mockNotifications = [
-    NotificationData(
-      id: '1',
-      title: 'New Diary Entry Shared',
-      message: 'Someone shared a new diary entry with you from their trip to the mountains. Check out the beautiful photos and the audio logs they recorded during the hike!',
-      timestamp: '24 Oct 2023 • 14:30',
-      icon: Icons.share_outlined,
-      isUnread: true,
-    ),
-    NotificationData(
-      id: '2',
-      title: 'System Update',
-      message: 'A new version of Navigation Diary is available. Version 2.1.0 includes performance improvements for map rendering and a new dark mode theme. Update now to enjoy the latest features and bug fixes. We have also improved the diary entry synchronization to be faster and more reliable.',
-      timestamp: '23 Oct 2023 • 09:15',
-      icon: Icons.system_update_outlined,
-      isUnread: true,
-    ),
-    NotificationData(
-      id: '3',
-      title: 'Location Reminder',
-      message: 'You are near "University Library". Would you like to check your previous diary entries from this location? It seems you spent a lot of time here last month.',
-      timestamp: '22 Oct 2023 • 18:45',
-      icon: Icons.location_on_outlined,
-      isUnread: false,
-    ),
-  ];
+  @override
+  State<NotificationPopup> createState() => _NotificationPopupState();
+}
+
+class _NotificationPopupState extends State<NotificationPopup> {
+  final NotificationService _notificationService = NotificationService();
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationService.addListener(_onNotificationServiceChanged);
+  }
+
+  @override
+  void dispose() {
+    _notificationService.removeListener(_onNotificationServiceChanged);
+    super.dispose();
+  }
+
+  void _onNotificationServiceChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final settings = SettingsService();
+    final notifications = _notificationService.notifications;
 
     return Material(
       type: MaterialType.transparency,
       child: Container(
-        width: width,
-        height: height,
+        width: widget.width,
+        height: widget.height,
         clipBehavior: Clip.antiAlias,
         decoration: ShapeDecoration(
           color: theme.colorScheme.surface,
@@ -105,7 +86,7 @@ class NotificationPopup extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             PulsingBadge(
-                              label: '${_mockNotifications.length}',
+                              label: _notificationService.unreadCountDisplay,
                             ),
                           ],
                         ),
@@ -135,21 +116,22 @@ class NotificationPopup extends StatelessWidget {
               child: Divider(height: 1, color: theme.colorScheme.outlineVariant),
             ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(10),
-                children: [
-                  ..._mockNotifications.map((n) => NotificationCard(notification: n)),
-                  const SizedBox(height: 10),
-                  _buildStaticNotificationCard(theme),
-                ],
-              ),
+              child: _notificationService.isLoading && notifications.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : ListView(
+                    padding: const EdgeInsets.all(10),
+                    children: [
+                      ...notifications.map((n) => NotificationCard(notification: n)),
+                      if (notifications.isEmpty)
+                        _buildStaticNotificationCard(theme),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
             ),
-            // Bottom Divider
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Divider(height: 1, color: theme.colorScheme.outlineVariant),
             ),
-            // Bottom margin same as the top margin (10px) to prevent cards from touching the edge
             const SizedBox(height: 10),
           ],
         ),
@@ -233,6 +215,7 @@ class _NotificationCardState extends State<NotificationCard> with SingleTickerPr
   late AnimationController _animationController;
   late Animation<double> _shadowAnimation;
   final SettingsService _settings = SettingsService();
+  final NotificationService _notificationService = NotificationService();
 
   @override
   void initState() {
@@ -252,6 +235,13 @@ class _NotificationCardState extends State<NotificationCard> with SingleTickerPr
     }
 
     _settings.addListener(_onSettingsChanged);
+
+    // Mark as read when it appears
+    if (widget.notification.isUnread) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _notificationService.markAsRead(widget.notification.id);
+      });
+    }
   }
 
   void _onSettingsChanged() {
@@ -351,7 +341,7 @@ class _NotificationCardState extends State<NotificationCard> with SingleTickerPr
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      widget.notification.timestamp,
+                      _formatDateTime(widget.notification.shownAt),
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.bold,
@@ -392,6 +382,12 @@ class _NotificationCardState extends State<NotificationCard> with SingleTickerPr
       ),
     );
   }
+
+  String _formatDateTime(DateTime? dateTime) {
+    if (dateTime == null) return '';
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${dateTime.day} ${months[dateTime.month - 1]} ${dateTime.year} • ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
 }
 
 void showNotificationPopup(BuildContext context, {GlobalKey? tabBarKey, GlobalKey? fabKey, GlobalKey? newEntryKey}) {
@@ -412,8 +408,6 @@ class _NotificationPopupDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // final theme = Theme.of(context);
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final mediaQuery = MediaQuery.of(context);

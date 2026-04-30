@@ -1,8 +1,8 @@
 import 'dart:async';
-
+import 'package:flutter/material.dart';
 import '../models/diary_entry.dart';
 
-class DiaryService {
+class DiaryService extends ChangeNotifier {
   static final DiaryService _instance = DiaryService._internal();
   factory DiaryService() => _instance;
   DiaryService._internal();
@@ -117,13 +117,43 @@ class DiaryService {
     );
 
     _entries.insert(0, entry);
+    notifyListeners();
     return entry;
   }
 
   Future<void> deleteEntry(String id) async {
     await Future.delayed(const Duration(milliseconds: 250));
     _entries.removeWhere((entry) => entry.id == id);
+    notifyListeners();
   }
 
   List<DiaryEntry> get entries => List.unmodifiable(_entries);
+
+  int get unreadMessageCount {
+    return _entries.fold<int>(0, (count, entry) => count + (entry.badgeCount ?? 0));
+  }
+
+  bool get hasUnreadMessages => unreadMessageCount > 0;
+
+  void markAsRead(String id) {
+    int index = _entries.indexWhere((e) => e.id == id);
+    if (index != -1 && _entries[index].badgeCount != null && _entries[index].badgeCount! > 0) {
+      final oldEntry = _entries[index];
+      _entries[index] = DiaryEntry(
+        id: oldEntry.id,
+        title: oldEntry.title,
+        date: oldEntry.date,
+        isPrivate: oldEntry.isPrivate,
+        content: oldEntry.content,
+        hasText: oldEntry.hasText,
+        audioRecordings: oldEntry.audioRecordings,
+        images: oldEntry.images,
+        videos: oldEntry.videos,
+        messages: oldEntry.messages,
+        location: oldEntry.location,
+        badgeCount: 0,
+      );
+      notifyListeners();
+    }
+  }
 }

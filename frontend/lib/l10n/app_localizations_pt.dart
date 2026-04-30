@@ -334,6 +334,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get navProfile => 'Perfil';
 
   @override
+  String get sessionExpiredLogoutMessage =>
+      'Você foi desconectado porque sua sessão expirou.';
+
+  @override
+  String get goToProfile => 'Ir para o Perfil';
+
+  @override
   String get faqSubtitle => 'Perguntas Frequentes';
 
   @override

@@ -108,6 +108,8 @@
   "navGoTo": "Ir Para",
   "navDiary": "Diário",
   "navProfile": "Perfil",
+  "sessionExpiredLogoutMessage": "Você foi desconectado porque sua sessão expirou.",
+  "goToProfile": "Ir para o Perfil",
   "faqSubtitle": "Perguntas Frequentes",
   "themeSystem": "Sistema",
   "themeLight": "Claro",

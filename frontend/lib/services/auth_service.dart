@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/accessibility_profile.dart';
 import 'api_client.dart';
+import 'settings_service.dart';
 
 class AuthService extends ChangeNotifier {
   static final AuthService _instance = AuthService._internal();
@@ -61,6 +62,9 @@ class AuthService extends ChangeNotifier {
     _preferredLanguageCode = prefs.getString(_userPreferredLanguageKey) ?? 'pt';
     _audioGuidance = prefs.getBool(_userAudioGuidanceKey) ?? false;
     _isLoggedIn = _token != null && _token!.isNotEmpty;
+    if (_accessibilityProfile != null) {
+      await SettingsService().setAccessibilityProfile(_accessibilityProfile!);
+    }
     notifyListeners();
   }
 
@@ -98,6 +102,7 @@ class AuthService extends ChangeNotifier {
         );
         await prefs.setString(_userPreferredLanguageKey, _preferredLanguageCode);
         await prefs.setBool(_userAudioGuidanceKey, _audioGuidance);
+        await SettingsService().setAccessibilityProfile(_accessibilityProfile!);
         notifyListeners();
         return true;
       }
@@ -132,6 +137,10 @@ class AuthService extends ChangeNotifier {
       _audioGuidance = user['audio_guidance'] as bool? ?? false;
       _isLoggedIn = _token != null && _token!.isNotEmpty;
 
+      if (_accessibilityProfile != null) {
+        await SettingsService().setAccessibilityProfile(_accessibilityProfile!);
+      }
+
       if (!_isLoggedIn) return false;
 
       final prefs = await SharedPreferences.getInstance();
@@ -161,6 +170,7 @@ class AuthService extends ChangeNotifier {
     String email,
     String password,
     String confirmPassword,
+    AccessibilityProfile accessibilityProfile,
   ) async {
     if (password != confirmPassword) {
       return false;
@@ -177,7 +187,7 @@ class AuthService extends ChangeNotifier {
           'phone': null,
           'bio': null,
           'role': 'user',
-          'accessibility_profile': 'none',
+          'accessibility_profile': accessibilityProfile.serverValue,
           'preferred_language': 'pt',
           'audio_guidance': false,
         }),
@@ -203,6 +213,10 @@ class AuthService extends ChangeNotifier {
       _preferredLanguageCode = (user['preferred_language'] as String?) ?? 'pt';
       _audioGuidance = user['audio_guidance'] as bool? ?? false;
       _isLoggedIn = _token != null && _token!.isNotEmpty;
+
+      if (_accessibilityProfile != null) {
+        await SettingsService().setAccessibilityProfile(_accessibilityProfile!);
+      }
 
       if (!_isLoggedIn) return false;
 

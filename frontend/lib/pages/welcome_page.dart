@@ -70,6 +70,7 @@ class _WelcomePageState extends State<WelcomePage> {
       email,
       password,
       confirmPassword,
+      _accessibilityService.selectedProfile,
     );
     if (success) {
       await _setSeenWelcomePage();
