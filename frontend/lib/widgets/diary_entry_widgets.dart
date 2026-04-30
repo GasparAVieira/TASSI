@@ -63,6 +63,10 @@ class _PulsingBadgeState extends State<PulsingBadge>
 
   @override
   Widget build(BuildContext context) {
+    if (widget.label == '0') {
+      return widget.child ?? const SizedBox.shrink();
+    }
+
     final theme = Theme.of(context);
 
     final badgeElement = AnimatedBuilder(
@@ -211,7 +215,7 @@ class _CollapsibleSectionState extends State<CollapsibleSection>
                 ),
                 if (widget.badgeCount != null && widget.badgeCount! > 0) ...[
                   const SizedBox(width: 8),
-                  PulsingBadge(label: widget.badgeCount.toString()),
+                  PulsingBadge(label: widget.badgeCount! > 9 ? '9+' : widget.badgeCount.toString()),
                 ],
                 const Spacer(),
                 RotationTransition(
@@ -1029,6 +1033,7 @@ Widget buildChatSection(
   ThemeData theme,
   DiaryEntry entry,
   SettingsService settings, {
+  required bool hasUnreadMessages,
   required VoidCallback onTogglePrivacy,
 }) {
   if (entry.isPrivate) {
@@ -1077,7 +1082,12 @@ Widget buildChatSection(
         ),
         child: entry.messages.isEmpty
             ? _buildEmptyChat(theme)
-            : _buildChatList(theme, entry.messages, settings),
+            : _buildChatList(
+                theme,
+                entry.messages,
+                settings,
+                hasUnreadMessages: entry.badgeCount != null && entry.badgeCount! > 0,
+              ),
       ),
       const SizedBox(height: 12),
       Row(
@@ -1146,12 +1156,15 @@ class _ChatSendButton extends StatelessWidget {
 Widget _buildChatList(
   ThemeData theme,
   List<ChatMessage> messages,
-  SettingsService settings,
-) {
-  final oldMessages = messages.length > 1
+  SettingsService settings, {
+  required bool hasUnreadMessages,
+}) {
+  final oldMessages = hasUnreadMessages && messages.length > 1
       ? messages.sublist(0, messages.length - 1)
       : messages;
-  final newMessages = messages.length > 1 ? [messages.last] : [];
+  final newMessages = hasUnreadMessages && messages.length > 1
+      ? [messages.last]
+      : [];
 
   return Column(
     children: [

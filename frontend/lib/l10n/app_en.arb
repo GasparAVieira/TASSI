@@ -108,6 +108,8 @@
   "navGoTo": "Go To",
   "navDiary": "Diary",
   "navProfile": "Profile",
+  "sessionExpiredLogoutMessage": "You have been logged out because your session expired.",
+  "goToProfile": "Go to Profile",
   "faqSubtitle": "Frequently Asked Questions",
   "themeSystem": "System",
   "themeLight": "Light",

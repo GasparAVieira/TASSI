@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/diary_entry.dart';
 import '../services/settings_service.dart';
+import '../services/diary_service.dart';
 import '../widgets/diary_entry_widgets.dart';
 
 class DiaryEntryPage extends StatefulWidget {
@@ -17,12 +18,26 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
   bool _allExpanded = true;
   final Map<String, bool> _sectionStates = {};
   final GlobalKey<AudioCarouselState> _audioCarouselKey = GlobalKey<AudioCarouselState>();
+  final DiaryService _diaryService = DiaryService();
+  int _badgeCount = 0;
 
   @override
   void initState() {
     super.initState();
     _isPrivate = widget.entry.isPrivate;
+    _badgeCount = widget.entry.badgeCount ?? 0;
     _initSectionStates();
+    
+    // Mark entry as read when viewed
+    if (_badgeCount > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _badgeCount = 0;
+        });
+        _diaryService.markAsRead(widget.entry.id);
+      });
+    }
   }
 
   void _initSectionStates() {
@@ -79,7 +94,7 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
       videos: widget.entry.videos,
       messages: widget.entry.messages,
       location: widget.entry.location,
-      badgeCount: widget.entry.badgeCount,
+      badgeCount: _badgeCount,
     );
 
     return Scaffold(
@@ -208,12 +223,13 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
                     title: 'Chat Assistance',
                     isExpanded: _sectionStates['chat'],
                     onExpansionChanged: (expanded) => _updateSectionState('chat', expanded),
-                    badgeCount: widget.entry.badgeCount,
+                    badgeCount: _badgeCount,
                     child: buildChatSection(
-                      context, 
-                      theme, 
-                      currentEntry, 
+                      context,
+                      theme,
+                      currentEntry,
                       settings,
+                      hasUnreadMessages: _badgeCount > 0,
                       onTogglePrivacy: _togglePrivacy,
                     ),
                   ),
