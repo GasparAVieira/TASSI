@@ -17,7 +17,7 @@ class EpocService:
 
     def connect(self):
         self.ws = websocket.create_connection(
-            "wss://localhost:6868",
+            "wss://192.168.1.245:6868",
             sslopt={"cert_reqs": ssl.CERT_NONE},
         )
 
