@@ -62,6 +62,31 @@ def user_received_template_today(
     )
 
 
+def create_user_notification(
+    db: Session,
+    user: User,
+    template_type: str,
+    *,
+    expires_at: datetime | None = None,
+) -> UserNotification | None:
+    template = get_template_by_type(db, template_type)
+
+    if template is None:
+        return None
+
+    notification = UserNotification(
+        user_id=user.id,
+        template_id=template.id,
+        expires_at=expires_at,
+    )
+
+    db.add(notification)
+    db.commit()
+    db.refresh(notification)
+
+    return notification
+
+
 def create_user_notification_if_not_sent_today(
     db: Session,
     user: User,
@@ -75,16 +100,7 @@ def create_user_notification_if_not_sent_today(
     if user_received_template_today(db, user.id, template.id):
         return None
 
-    notification = UserNotification(
-        user_id=user.id,
-        template_id=template.id,
-    )
-
-    db.add(notification)
-    db.commit()
-    db.refresh(notification)
-
-    return notification
+    return create_user_notification(db, user, template_type)
 
 
 def serialize_user_notification(
