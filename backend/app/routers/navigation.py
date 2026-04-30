@@ -9,12 +9,12 @@ from app.services.routing_service import calculate_route
 
 from uuid import UUID
 from app.models.path import Path
+from app.models.location import Location
 
 from app.core.enums import Language
 from app.services.routing_service import select_instruction
 
 from app.core.enums import AccessibilityProfile
-from backend.app.models.location import Location
 
 router = APIRouter(prefix="/api/v1/navigation", tags=["Navigation"])
 
