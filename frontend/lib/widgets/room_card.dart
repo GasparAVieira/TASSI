@@ -17,6 +17,15 @@ class RoomCard extends StatelessWidget {
     required this.onFavoriteToggle,
   });
 
+   String? _thumbnailUrl() {
+    final url = room.mpUrl;
+    if (url == null || url.isEmpty) return null;
+    final uri = Uri.tryParse(url);
+    final modelId = uri?.queryParameters['m'];
+    if (modelId == null || modelId.isEmpty) return null;
+    return 'https://my.matterport.com/api/v1/player/models/$modelId/thumb/';
+  }
+
   void _openMatterport(BuildContext context) {
     // Using the test URL provided if room.mpUrl is not set
     final String url = (room.mpUrl != null && room.mpUrl!.isNotEmpty)
@@ -92,9 +101,9 @@ class RoomCard extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  if (room.mpUrl != null && room.mpUrl!.isNotEmpty)
+                  if (_thumbnailUrl() != null)
                     Image.network(
-                      room.mpUrl!,
+                      _thumbnailUrl()!,
                       width: double.infinity,
                       height: 180,
                       fit: BoxFit.cover,
