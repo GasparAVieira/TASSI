@@ -169,28 +169,21 @@ class _ProfileHeaderCardState extends State<ProfileHeaderCard> {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primaryContainer,
-                        shape: BoxShape.circle,
-                      ),
-                      child: ClipOval(
-                        child: _profileImage != null
-                            ? Image.file(
-                                _profileImage!,
-                                fit: BoxFit.cover,
-                                width: 72,
-                                height: 72,
-                              )
-                            : Icon(
-                                Icons.person,
-                                color: theme.colorScheme.onPrimaryContainer,
-                                size: 34,
-                              ),
-                      ),
-                    ),
+                    _profileImage != null
+                        ? CircleAvatar(
+                            radius: 36,
+                            backgroundImage: FileImage(_profileImage!),
+                            backgroundColor: Colors.transparent,
+                          )
+                        : CircleAvatar(
+                            radius: 36,
+                            backgroundColor: theme.colorScheme.primaryContainer,
+                            child: Icon(
+                              Icons.person,
+                              color: theme.colorScheme.onPrimaryContainer,
+                              size: 34,
+                            ),
+                          ),
                     Positioned(
                       right: -6,
                       top: -6,
@@ -269,12 +262,10 @@ class _ProfileHeaderCardState extends State<ProfileHeaderCard> {
 
 class ProfileStatsCard extends StatelessWidget {
   final String email;
-  final AccessibilityProfile accessibilityProfile;
 
   const ProfileStatsCard({
     super.key,
     required this.email,
-    required this.accessibilityProfile,
   });
 
   @override
@@ -290,11 +281,6 @@ class ProfileStatsCard extends StatelessWidget {
         child: Column(
           children: [
             _ProfileStatRow(label: 'Email', value: email),
-            const Divider(height: 24),
-            _ProfileStatRow(
-              label: 'Accessibility',
-              value: accessibilityProfile.displayName,
-            ),
           ],
         ),
       ),
@@ -606,6 +592,7 @@ class _ProfileStatRow extends StatelessWidget {
           flex: 3,
           child: Text(
             label,
+            textAlign: TextAlign.start,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -615,6 +602,7 @@ class _ProfileStatRow extends StatelessWidget {
           flex: 5,
           child: Text(
             value,
+            textAlign: TextAlign.start,
             style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),

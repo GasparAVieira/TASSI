@@ -158,6 +158,36 @@ abstract class AppLocalizations {
   /// **'Manage application\'s permissions'**
   String get appPermissionsSubtitle;
 
+  /// No description provided for @locationPermissionRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location Permission Required'**
+  String get locationPermissionRequiredTitle;
+
+  /// No description provided for @locationPermissionRequiredSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please allow location access to continue.'**
+  String get locationPermissionRequiredSubtitle;
+
+  /// No description provided for @grantLocationPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Grant Location Permission'**
+  String get grantLocationPermission;
+
+  /// No description provided for @locationPermissionRequiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is required to use this app.'**
+  String get locationPermissionRequiredMessage;
+
+  /// No description provided for @locationPermissionRequiredOpenSettingsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is required to use this app. Open settings to enable it.'**
+  String get locationPermissionRequiredOpenSettingsMessage;
+
   /// No description provided for @permissionCamera.
   ///
   /// In en, this message translates to:
@@ -181,6 +211,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Required for capturing video sound'**
   String get permissionMicrophoneSubtitle;
+
+  /// No description provided for @permissionLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get permissionLocation;
+
+  /// No description provided for @permissionLocationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Required to get your current coordinates'**
+  String get permissionLocationSubtitle;
 
   /// No description provided for @permissionGallery.
   ///
@@ -307,6 +349,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Accessibility'**
   String get accessibility;
+
+  /// No description provided for @accessibilityProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Accessibility Profile'**
+  String get accessibilityProfile;
+
+  /// No description provided for @wheelchairProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Wheelchair'**
+  String get wheelchairProfile;
+
+  /// No description provided for @lowVisionProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Vision'**
+  String get lowVisionProfile;
+
+  /// No description provided for @blindProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Blind'**
+  String get blindProfile;
+
+  /// No description provided for @applyProfileSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Profile Settings'**
+  String get applyProfileSettings;
+
+  /// No description provided for @accessibilityProfileDescriptionWheelchair.
+  ///
+  /// In en, this message translates to:
+  /// **'Routes will use wheelchair-friendly path weights.'**
+  String get accessibilityProfileDescriptionWheelchair;
+
+  /// No description provided for @accessibilityProfileDescriptionBlind.
+  ///
+  /// In en, this message translates to:
+  /// **'Routes will use blind-friendly path weights.'**
+  String get accessibilityProfileDescriptionBlind;
+
+  /// No description provided for @accessibilityProfileDescriptionBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Low vision mode is enabled: high contrast, large text, audio feedback, navigation, and haptic assistance.'**
+  String get accessibilityProfileDescriptionBoth;
+
+  /// No description provided for @accessibilityProfileDescriptionNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard routing will be used.'**
+  String get accessibilityProfileDescriptionNone;
 
   /// No description provided for @hapticFeedback.
   ///
@@ -503,7 +599,7 @@ abstract class AppLocalizations {
   /// No description provided for @continueWithoutAccount.
   ///
   /// In en, this message translates to:
-  /// **'Continue without account'**
+  /// **'Continue Without Account'**
   String get continueWithoutAccount;
 
   /// No description provided for @continueWithoutAccountHint.

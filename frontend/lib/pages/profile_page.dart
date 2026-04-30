@@ -9,7 +9,9 @@ import '../main.dart';
 import '../services/auth_service.dart';
 import '../models/accessibility_profile.dart';
 import '../services/settings_service.dart';
+import '../services/accessibility_profile_service.dart';
 import '../widgets/auth_widgets.dart';
+import '../widgets/accessibility_profile_picker.dart';
 import '../widgets/profile_widgets.dart';
 import '../widgets/faq_widgets.dart';
 import '../widgets/gdpr_widgets.dart';
@@ -385,8 +387,26 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
           const SizedBox(height: 10),
           ProfileStatsCard(
             email: _authService.userEmail ?? 'Not available',
-            accessibilityProfile:
-                _authService.accessibilityProfile ?? AccessibilityProfile.None,
+          ),
+          const SizedBox(height: 10),
+          ListenableBuilder(
+            listenable: AccessibilityProfileService(),
+            builder: (context, _) {
+              final accessibilityService = AccessibilityProfileService();
+              return AccessibilityProfilePicker(
+                wheelchairEnabled: accessibilityService.wheelchairEnabled,
+                lowVisionEnabled: accessibilityService.lowVisionEnabled,
+                blindEnabled: accessibilityService.blindEnabled,
+                onWheelchairChanged: (value) =>
+                    accessibilityService.setWheelchairEnabled(value),
+                onLowVisionChanged: (value) =>
+                    accessibilityService.setLowVisionEnabled(value),
+                onBlindChanged: (value) =>
+                    accessibilityService.setBlindEnabled(value),
+                showApplyButton: true,
+                onApply: accessibilityService.applyProfile,
+              );
+            },
           ),
           const SizedBox(height: 10),
           ProfileDetailsCard(
@@ -430,48 +450,129 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
   Widget _buildActiveCard() {
     switch (_currentView) {
       case _AuthView.login:
-        return LoginCard(
-          emailController: _emailController,
-          passwordController: _passwordController,
-          onLogin: (email, password) async {
-            final success = await _authService.login(email, password);
-            if (success) {
-              _emailController.clear();
-              _passwordController.clear();
-            }
-            return success;
-          },
-          onSwitchToSignup: () => _setView(_AuthView.signup),
-          onForgotPassword: () => _setView(_AuthView.resetPassword),
+        return Column(
+          children: [
+            LoginCard(
+              emailController: _emailController,
+              passwordController: _passwordController,
+              onLogin: (email, password) async {
+                final success = await _authService.login(email, password);
+                if (success) {
+                  _emailController.clear();
+                  _passwordController.clear();
+                }
+                return success;
+              },
+              onSwitchToSignup: () => _setView(_AuthView.signup),
+              onForgotPassword: () => _setView(_AuthView.resetPassword),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: ListenableBuilder(
+                listenable: AccessibilityProfileService(),
+                builder: (context, _) {
+                  final accessibilityService = AccessibilityProfileService();
+                  return AccessibilityProfilePicker(
+                    wheelchairEnabled: accessibilityService.wheelchairEnabled,
+                    lowVisionEnabled: accessibilityService.lowVisionEnabled,
+                    blindEnabled: accessibilityService.blindEnabled,
+                    onWheelchairChanged: (value) =>
+                        accessibilityService.setWheelchairEnabled(value),
+                    onLowVisionChanged: (value) =>
+                        accessibilityService.setLowVisionEnabled(value),
+                    onBlindChanged: (value) =>
+                        accessibilityService.setBlindEnabled(value),
+                    showApplyButton: true,
+                    onApply: accessibilityService.applyProfile,
+                  );
+                },
+              ),
+            ),
+          ],
         );
       case _AuthView.signup:
-        return SignupCard(
-          nameController: _nameController,
-          emailController: _emailController,
-          passwordController: _passwordController,
-          confirmPasswordController: _confirmPasswordController,
-          onSignup: (name, email, password, confirmPassword) async {
-            final success = await _authService.signup(
-              name,
-              email,
-              password,
-              confirmPassword,
-            );
-            if (success) {
-              _nameController.clear();
-              _emailController.clear();
-              _passwordController.clear();
-              _confirmPasswordController.clear();
-            }
-            return success;
-          },
-          onSwitchToLogin: () => _setView(_AuthView.login),
+        return Column(
+          children: [
+            SignupCard(
+              nameController: _nameController,
+              emailController: _emailController,
+              passwordController: _passwordController,
+              confirmPasswordController: _confirmPasswordController,
+              onSignup: (name, email, password, confirmPassword) async {
+                final success = await _authService.signup(
+                  name,
+                  email,
+                  password,
+                  confirmPassword,
+                );
+                if (success) {
+                  _nameController.clear();
+                  _emailController.clear();
+                  _passwordController.clear();
+                  _confirmPasswordController.clear();
+                }
+                return success;
+              },
+              onSwitchToLogin: () => _setView(_AuthView.login),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: ListenableBuilder(
+                listenable: AccessibilityProfileService(),
+                builder: (context, _) {
+                  final accessibilityService = AccessibilityProfileService();
+                  return AccessibilityProfilePicker(
+                    wheelchairEnabled: accessibilityService.wheelchairEnabled,
+                    lowVisionEnabled: accessibilityService.lowVisionEnabled,
+                    blindEnabled: accessibilityService.blindEnabled,
+                    onWheelchairChanged: (value) =>
+                        accessibilityService.setWheelchairEnabled(value),
+                    onLowVisionChanged: (value) =>
+                        accessibilityService.setLowVisionEnabled(value),
+                    onBlindChanged: (value) =>
+                        accessibilityService.setBlindEnabled(value),
+                    showApplyButton: true,
+                    onApply: accessibilityService.applyProfile,
+                  );
+                },
+              ),
+            ),
+          ],
         );
       case _AuthView.resetPassword:
-        return ResetPasswordCard(
-          emailController: _emailController,
-          onReset: (email) async => await _authService.resetPassword(email),
-          onBackToLogin: () => _setView(_AuthView.login),
+        return Column(
+          children: [
+            ResetPasswordCard(
+              emailController: _emailController,
+              onReset: (email) async => await _authService.resetPassword(email),
+              onBackToLogin: () => _setView(_AuthView.login),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: ListenableBuilder(
+                listenable: AccessibilityProfileService(),
+                builder: (context, _) {
+                  final accessibilityService = AccessibilityProfileService();
+                  return AccessibilityProfilePicker(
+                    wheelchairEnabled: accessibilityService.wheelchairEnabled,
+                    lowVisionEnabled: accessibilityService.lowVisionEnabled,
+                    blindEnabled: accessibilityService.blindEnabled,
+                    onWheelchairChanged: (value) =>
+                        accessibilityService.setWheelchairEnabled(value),
+                    onLowVisionChanged: (value) =>
+                        accessibilityService.setLowVisionEnabled(value),
+                    onBlindChanged: (value) =>
+                        accessibilityService.setBlindEnabled(value),
+                    showApplyButton: true,
+                    onApply: accessibilityService.applyProfile,
+                  );
+                },
+              ),
+            ),
+          ],
         );
     }
   }
@@ -487,9 +588,11 @@ class _SettingsTabContent extends StatefulWidget {
 class _SettingsTabContentState extends State<_SettingsTabContent> {
   final AuthService _authService = AuthService();
   final SettingsService _settings = SettingsService();
+
   PermissionStatus _cameraPermissionStatus = PermissionStatus.denied;
   PermissionStatus _microphonePermissionStatus = PermissionStatus.denied;
   PermissionStatus _galleryPermissionStatus = PermissionStatus.denied;
+  PermissionStatus _locationPermissionStatus = PermissionStatus.denied;
 
   @override
   void initState() {
@@ -1281,6 +1384,21 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                         const Divider(height: 1),
                         _buildPermissionTile(
                           context,
+                          title: l10n.permissionLocation,
+                          subtitle: l10n.permissionLocationSubtitle,
+                          status: _locationPermissionStatus,
+                          onPressed: () async {
+                            await _requestPermission(
+                              Permission.location,
+                              'location',
+                            );
+                            await _refreshPermissionStatuses();
+                            setModalState(() {});
+                          },
+                        ),
+                        const Divider(height: 1),
+                        _buildPermissionTile(
+                          context,
                           title: l10n.permissionGallery,
                           subtitle: l10n.permissionGallerySubtitle,
                           status: _galleryPermissionStatus,
@@ -1317,12 +1435,14 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
   Future<void> _refreshPermissionStatuses() async {
     final cameraStatus = await Permission.camera.status;
     final microphoneStatus = await Permission.microphone.status;
+    final locationStatus = await Permission.location.status;
     final galleryStatus = await _getGalleryPermissionStatus();
 
     if (!mounted) return;
     setState(() {
       _cameraPermissionStatus = cameraStatus;
       _microphonePermissionStatus = microphoneStatus;
+      _locationPermissionStatus = locationStatus;
       _galleryPermissionStatus = galleryStatus;
     });
   }
@@ -1378,11 +1498,12 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
       if (!mounted) return false;
 
       if (status.isPermanentlyDenied) {
+        final message = permission == Permission.location
+            ? 'Location permission is required. Open settings to enable it.'
+            : 'Permission denied. Open settings to enable $name.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Permission denied permanently. Open settings to enable $name.',
-            ),
+            content: Text(message),
             behavior: SnackBarBehavior.floating,
             action: SnackBarAction(
               label: AppLocalizations.of(context)!.openAppSettings,
@@ -1393,9 +1514,12 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
         return false;
       }
 
+      final deniedMessage = permission == Permission.location
+          ? 'Location permission is required to use this app.'
+          : 'Allow $name permission to continue.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Allow $name permission to continue.'),
+          content: Text(deniedMessage),
           behavior: SnackBarBehavior.floating,
         ),
       );

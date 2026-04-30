@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_localizations.dart';
 import 'pages/welcome_page.dart';
@@ -220,6 +221,7 @@ class RootPage extends StatefulWidget {
 class _RootPageState extends State<RootPage> {
   Future<bool>? _initialization;
   bool _showWelcome = false;
+  PermissionStatus? _locationPermissionStatus;
 
   @override
   void initState() {
@@ -233,15 +235,36 @@ class _RootPageState extends State<RootPage> {
     final hasSeenWelcome = preferences.getBool('has_seen_welcome_page') ?? false;
     final isLoggedIn = AuthService.instance.isLoggedIn;
     _showWelcome = !isLoggedIn && !hasSeenWelcome;
+    if (!_showWelcome) {
+      await _refreshLocationPermission();
+    }
     return _showWelcome;
   }
 
+  Future<void> _refreshLocationPermission() async {
+    final status = await Permission.location.status;
+    if (!mounted) return;
+    setState(() {
+      _locationPermissionStatus = status;
+    });
+  }
+
+  Future<void> _requestLocationPermission() async {
+    final status = await Permission.location.request();
+    if (!mounted) return;
+    setState(() {
+      _locationPermissionStatus = status;
+    });
+  }
+
   void _onWelcomeComplete() {
-    if (mounted) {
+    if (!mounted) return;
+    _refreshLocationPermission().then((_) {
+      if (!mounted) return;
       setState(() {
         _showWelcome = false;
       });
-    }
+    });
   }
 
   @override
@@ -259,9 +282,72 @@ class _RootPageState extends State<RootPage> {
           return const MainNavigationScreen();
         }
 
-        return _showWelcome
-            ? WelcomePage(onContinue: _onWelcomeComplete)
-            : const MainNavigationScreen();
+        final l10n = AppLocalizations.of(context)!;
+
+        if (_showWelcome) {
+          return WelcomePage(onContinue: _onWelcomeComplete);
+        }
+
+        if (_locationPermissionStatus == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (!_locationPermissionStatus!.isGranted) {
+          final isPermanentlyDenied =
+              _locationPermissionStatus == PermissionStatus.permanentlyDenied;
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(AppLocalizations.of(context)!.appPermissions),
+              elevation: 0,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.location_off,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    const SizedBox(height: 24),
+                    Text(
+                      l10n.locationPermissionRequiredTitle,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n.locationPermissionRequiredSubtitle,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton(
+                      onPressed: isPermanentlyDenied
+                          ? openAppSettings
+                          : _requestLocationPermission,
+                      child: Text(isPermanentlyDenied
+                          ? l10n.openAppSettings
+                          : l10n.grantLocationPermission),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return const MainNavigationScreen();
       },
     );
   }
@@ -274,9 +360,55 @@ class MainNavigationScreen extends StatefulWidget {
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class _MainNavigationScreenState extends State<MainNavigationScreen> with WidgetsBindingObserver {
   int currentPageIndex = 0;
   int profileInitialTabIndex = 0;
+  PermissionStatus? _locationPermissionStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshLocationPermission();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshLocationPermission();
+    }
+  }
+
+  Future<void> _refreshLocationPermission() async {
+    final status = await Permission.location.status;
+    if (!mounted) return;
+    setState(() {
+      _locationPermissionStatus = status;
+    });
+  }
+
+  Future<void> _requestLocationPermission() async {
+    final status = await Permission.location.request();
+    if (!mounted) return;
+    setState(() {
+      _locationPermissionStatus = status;
+    });
+    if (!status.isGranted) {
+      final l10n = AppLocalizations.of(context)!;
+      final message = status.isPermanentlyDenied
+          ? l10n.locationPermissionRequiredOpenSettingsMessage
+          : l10n.locationPermissionRequiredMessage;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
+    }
+  }
 
   void _openSettings() {
     setState(() {
@@ -290,6 +422,51 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final isDark = theme.brightness == Brightness.dark;
+
+    if (_locationPermissionStatus == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (!_locationPermissionStatus!.isGranted) {
+      final isPermanentlyDenied = _locationPermissionStatus == PermissionStatus.permanentlyDenied;
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(AppLocalizations.of(context)!.appPermissions),
+          elevation: 0,
+          backgroundColor: theme.colorScheme.surface,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.location_off, size: 64, color: theme.colorScheme.onSurfaceVariant),
+                const SizedBox(height: 24),
+                Text(
+                  'Location permission is required to use this app.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Please allow location access and then continue.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: isPermanentlyDenied ? openAppSettings : _requestLocationPermission,
+                  child: Text(isPermanentlyDenied ? AppLocalizations.of(context)!.openAppSettings : 'Grant Location Permission'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(

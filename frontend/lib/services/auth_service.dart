@@ -57,8 +57,7 @@ class AuthService extends ChangeNotifier {
     _phone = prefs.getString(_userPhoneKey);
     _bio = prefs.getString(_userBioKey);
     _role = prefs.getString(_userRoleKey);
-    _accessibilityProfile =
-        AccessibilityProfile.fromServerValue(prefs.getString(_userProfileKey));
+    _accessibilityProfile = AccessibilityProfile.fromServerValue(prefs.getString(_userProfileKey));
     _preferredLanguageCode = prefs.getString(_userPreferredLanguageKey) ?? 'pt';
     _audioGuidance = prefs.getBool(_userAudioGuidanceKey) ?? false;
     _isLoggedIn = _token != null && _token!.isNotEmpty;

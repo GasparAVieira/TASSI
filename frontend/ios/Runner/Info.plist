@@ -57,6 +57,8 @@
 	<string>Allow access to the camera to capture photos and videos.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Allow access to the microphone to record audio in videos.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Allow access to your location while using the app for indoor navigation and location-based diary features.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow access to your photo library to select existing photos and videos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

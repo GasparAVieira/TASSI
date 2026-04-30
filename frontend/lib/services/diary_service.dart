@@ -33,7 +33,7 @@ class DiaryService {
       images: ['img1', 'img2', 'img3', 'img4', 'img5'],
       videos: ['vid1', 'vid2'],
       messages: [],
-      location: 'Building B • B404',
+      location: 'loc_001',
     ),
     DiaryEntry(
       id: '2',
@@ -67,7 +67,7 @@ class DiaryService {
           isAdmin: false,
         ),
       ],
-      location: 'Building B • B404',
+      location: 'loc_002',
       badgeCount: 1,
     ),
   ];
@@ -82,6 +82,7 @@ class DiaryService {
     required String content,
     required bool isPrivate,
     required List<Attachment> attachments,
+    String location = '',
   }) async {
     await Future.delayed(const Duration(milliseconds: 350));
     final now = DateTime.now();
@@ -112,7 +113,7 @@ class DiaryService {
       images: attachments.where((attachment) => attachment.type == 'Image').map((attachment) => attachment.path ?? attachment.name).toList(),
       videos: attachments.where((attachment) => attachment.type == 'Video').map((attachment) => attachment.path ?? attachment.name).toList(),
       messages: [],
-      location: '',
+      location: location,
     );
 
     _entries.insert(0, entry);

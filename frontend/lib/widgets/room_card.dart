@@ -1,20 +1,37 @@
 import 'package:flutter/material.dart';
 
-import '../models/location.dart';
+import '../models/room.dart';
+import '../pages/matterport_viewer_page.dart';
 
-class LocationCard extends StatelessWidget {
-  final Location location;
+class RoomCard extends StatelessWidget {
+  final Room room;
   final bool isExpanded;
   final VoidCallback onToggle;
   final VoidCallback onFavoriteToggle;
 
-  const LocationCard({
+  const RoomCard({
     super.key,
-    required this.location,
+    required this.room,
     required this.isExpanded,
     required this.onToggle,
     required this.onFavoriteToggle,
   });
+
+  void _openMatterport(BuildContext context) {
+    // Using the test URL provided if room.mpUrl is not set
+    final String url = (room.mpUrl != null && room.mpUrl!.isNotEmpty)
+        ? room.mpUrl!
+        : "https://my.matterport.com/show/?m=fZKxJgeSWQZ";
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => MatterportViewerPage(
+          url: url,
+          title: room.name,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,17 +51,17 @@ class LocationCard extends StatelessWidget {
             onTap: onToggle,
             leading: const FlutterLogo(size: 56.0),
             title: Text(
-              location.name,
+              room.name,
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             subtitle: Text(
-              location.type,
+              '${room.code} · Floor ${room.floor}',
               style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (location.isWheelchairFriendly)
+                if (room.isWheelchairFriendly)
                   Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: Chip(
@@ -70,24 +87,47 @@ class LocationCard extends StatelessWidget {
             ),
           ),
           if (isExpanded) ...[
-            if (location.imageUrl != null && location.imageUrl!.isNotEmpty)
-              Image.network(
-                location.imageUrl!,
-                width: double.infinity,
-                height: 180,
-                fit: BoxFit.cover,
-              )
-            else
-              Container(
-                width: double.infinity,
-                height: 180,
-                color: theme.colorScheme.surfaceContainerHighest,
-                child: Icon(
-                  Icons.location_on,
-                  size: 64,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+            GestureDetector(
+              onTap: () => _openMatterport(context),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (room.mpUrl != null && room.mpUrl!.isNotEmpty)
+                    Image.network(
+                      room.mpUrl!,
+                      width: double.infinity,
+                      height: 180,
+                      fit: BoxFit.cover,
+                    )
+                  else
+                    Container(
+                      width: double.infinity,
+                      height: 180,
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      child: Icon(
+                        Icons.location_on,
+                        size: 64,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'View 3D Space',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -102,13 +142,13 @@ class LocationCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              location.name,
+                              room.name,
                               style: theme.textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              location.type,
+                              '${room.code} · Floor ${room.floor}',
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -118,19 +158,12 @@ class LocationCard extends StatelessWidget {
                       ),
                       IconButton(
                         icon: Icon(
-                          location.isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: location.isFavorite ? theme.colorScheme.primary : null,
+                          room.isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: room.isFavorite ? theme.colorScheme.primary : null,
                         ),
                         onPressed: onFavoriteToggle,
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    location.description ?? 'No description available.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
                   ),
                   const SizedBox(height: 16),
                   Row(
