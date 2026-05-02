@@ -105,3 +105,5 @@ wheel==0.46.3
 xmltodict==1.0.4
 yq==3.4.3
 zipp==3.21.0
+boto3==1.35.99
+botocore==1.35.99
