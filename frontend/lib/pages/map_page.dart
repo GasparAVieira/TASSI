@@ -40,7 +40,8 @@ class _MapPageState extends State<MapPage> {
       initialItem: floors.indexOf(selectedFloor),
     );
 
-    Future.delayed(Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
       setState(() {
         currentInstruction = "TESTE: instrução a funcionar";
         print("TESTE: instrução a funcionar");
@@ -48,17 +49,24 @@ class _MapPageState extends State<MapPage> {
     });
 
     Future.microtask(() async {
-      await beaconService.startScanning();
-      setState(() => scanning = true);
+      try {
+        await beaconService.startScanning();
+        if (!mounted) return;
+        setState(() => scanning = true);
+      } catch (e) {
+        debugPrint('Beacon scan initialization failed: $e');
+      }
     });
 
-    _beaconSub = beaconService.stream.listen((beacon) async {
+    _beaconSub = beaconService.stream.listen((beacon) {
+      if (!mounted) return;
       setState(() {
         currentBeacon = beacon;
       });
     });
 
     _navigationSub = beaconService.navigationStream.listen((data) {
+      if (!mounted) return;
       print("NAV RECEBIDO: $data");
 
       setState(() {

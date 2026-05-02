@@ -42,6 +42,7 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
 
   bool _isPrivate = true;
   bool _isAttachmentProcessing = false;
+  bool _isSaving = false;
   bool _isRequestingPermission = false;
   int _attachmentPageIndex = 0;
   int? _pendingDeleteAttachmentIndex;
@@ -703,14 +704,14 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
                       return Stack(
                         children: [
                           AbsorbPointer(
-                            absorbing: _isAttachmentProcessing,
+                            absorbing: _isAttachmentProcessing || _isSaving,
                             child: AnimatedOpacity(
-                              opacity: _isAttachmentProcessing ? 0.65 : 1.0,
+                              opacity: (_isAttachmentProcessing || _isSaving) ? 0.65 : 1.0,
                               duration: const Duration(milliseconds: 200),
                               child: TabBar(
                                 controller: widget.tabController,
                                 onTap: (index) {
-                                  if (_isAttachmentProcessing) return;
+                                  if (_isAttachmentProcessing || _isSaving) return;
                                   switch (index) {
                                     case 2:
                                       _showMediaChoice('Audio');
@@ -734,11 +735,11 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
                                 splashBorderRadius: BorderRadius.circular(8),
                                 indicatorSize: TabBarIndicatorSize.tab,
                                 dividerColor: Colors.transparent,
-                                labelColor: _isAttachmentProcessing
+                                labelColor: (_isAttachmentProcessing || _isSaving)
                                     ? theme.colorScheme.onSurfaceVariant
                                           .withValues(alpha: 0.5)
                                     : theme.colorScheme.onSurfaceVariant,
-                                unselectedLabelColor: _isAttachmentProcessing
+                                unselectedLabelColor: (_isAttachmentProcessing || _isSaving)
                                     ? theme.colorScheme.onSurfaceVariant
                                           .withValues(alpha: 0.45)
                                     : theme.colorScheme.onSurfaceVariant,
@@ -847,6 +848,7 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
               child: NewDiaryEntryCard(
                 isPrivate: _isPrivate,
                 isAttachmentProcessing: _isAttachmentProcessing,
+                isSaving: _isSaving,
                 onPrivacyChanged: (val) {
                   setState(() {
                     _isPrivate = val;
@@ -854,12 +856,17 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
                 },
                 onCancel: widget.onCancel,
                 onSave: (title, notes) async {
-                  await widget.onSave(
-                    title,
-                    notes,
-                    _isPrivate,
-                    List.unmodifiable(_newEntryMedia),
-                  );
+                  setState(() => _isSaving = true);
+                  try {
+                    await widget.onSave(
+                      title,
+                      notes,
+                      _isPrivate,
+                      List.unmodifiable(_newEntryMedia),
+                    );
+                  } finally {
+                    if (mounted) setState(() => _isSaving = false);
+                  }
                 },
               ),
             ),

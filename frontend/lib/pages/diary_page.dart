@@ -55,7 +55,9 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
   }
 
   void _onNotificationChanged() {
-    if (mounted) setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _loadDiaryEntries() async {
@@ -98,9 +100,11 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
   }
 
   void _onDiaryServiceChanged() {
-    if (!mounted) return;
-    setState(() {
-      _allEntries = _diaryService.entries;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _allEntries = _diaryService.entries;
+      });
     });
   }
 
@@ -784,7 +788,7 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
                       _selectedTabIndex = 0;
                     }),
                     onSave: (title, notes, isPrivate, attachments) async {
-                      final newEntry = await _diaryService.createEntry(
+                      await _diaryService.createEntry(
                         title: title,
                         content: notes,
                         isPrivate: isPrivate,
@@ -792,7 +796,6 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
                       );
                       if (!mounted) return;
                       setState(() {
-                        _allEntries.insert(0, newEntry);
                         _isCreatingEntry = false;
                         _tabController.index = 0;
                         _selectedTabIndex = 0;
@@ -814,14 +817,25 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
                 )
               else
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    itemCount: _filteredEntries.length,
-                    itemBuilder: (context, index) {
-                      final entry = _filteredEntries[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Card(
+                  child: _filteredEntries.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No diary entries found.',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _loadDiaryEntries,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            itemCount: _filteredEntries.length,
+                            itemBuilder: (context, index) {
+                              final entry = _filteredEntries[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Card(
                           elevation: 0,
                           margin: EdgeInsets.zero,
                           color: theme.colorScheme.surface,
@@ -1066,6 +1080,7 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
                     },
                   ),
                 ),
+              ),
             ],
           ),
         ),

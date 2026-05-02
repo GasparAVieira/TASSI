@@ -21,6 +21,7 @@ class _NotificationPopupState extends State<NotificationPopup> {
   void initState() {
     super.initState();
     _notificationService.addListener(_onNotificationServiceChanged);
+    _notificationService.fetchNotifications();
   }
 
   @override
@@ -118,14 +119,21 @@ class _NotificationPopupState extends State<NotificationPopup> {
             Expanded(
               child: _notificationService.isLoading && notifications.isEmpty
                 ? const Center(child: CircularProgressIndicator())
-                : ListView(
+                : ListView.builder(
                     padding: const EdgeInsets.all(10),
-                    children: [
-                      ...notifications.map((n) => NotificationCard(notification: n)),
-                      if (notifications.isEmpty)
-                        _buildStaticNotificationCard(theme),
-                      const SizedBox(height: 10),
-                    ],
+                    itemCount: notifications.isEmpty ? 1 : notifications.length + 1,
+                    itemBuilder: (context, index) {
+                      if (notifications.isEmpty) {
+                        return _buildStaticNotificationCard(theme);
+                      }
+                      if (index < notifications.length) {
+                        return NotificationCard(
+                          key: ValueKey(notifications[index].id),
+                          notification: notifications[index],
+                        );
+                      }
+                      return const SizedBox(height: 10);
+                    },
                   ),
             ),
             Padding(

@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../main.dart';
 import '../services/auth_service.dart';
 import '../models/accessibility_profile.dart';
+import '../services/feedback_service.dart';
 import '../services/settings_service.dart';
 import '../services/accessibility_profile_service.dart';
 import '../services/epoc_service.dart';
@@ -253,9 +254,11 @@ class _ProfileTabContentState extends State<_ProfileTabContent>
       _profilePhoneDisplay = 'Not set yet';
       _profilePhoneNumber = PhoneNumber(isoCode: 'PT');
       _profileRawPhoneNumber = '';
-      setState(() {
-        _isProfileLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isProfileLoading = false;
+        });
+      }
     }
   }
 
@@ -600,6 +603,7 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
   PermissionStatus _notificationPermissionStatus = PermissionStatus.denied;
   PermissionStatus _galleryPermissionStatus = PermissionStatus.denied;
   PermissionStatus _locationPermissionStatus = PermissionStatus.denied;
+  PermissionStatus _bluetoothPermissionStatus = PermissionStatus.denied;
 
   @override
   void initState() {
@@ -1059,16 +1063,6 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
             _buildSettingsCard(
               theme,
               children: [
-                _buildSwitchTile(
-                  context,
-                  title: l10n.wheelchairRoutes,
-                  subtitle: l10n.wheelchairRoutesSubtitle,
-                  icon: Icons.accessible_forward_outlined,
-                  value: _settings.wheelchairRoutesEnabled,
-                  onChanged: (val) =>
-                      _settings.setWheelchairRoutesEnabled(val),
-                ),
-                const Divider(height: 1),
                 _buildActionTile(
                   context,
                   title: l10n.connectEmotiv,
@@ -1098,8 +1092,13 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                   subtitle: l10n.audioFeedbackSubtitle,
                   icon: Icons.volume_up_outlined,
                   value: _settings.audioFeedbackEnabled,
-                  onChanged: (val) =>
-                      _settings.setAudioFeedbackEnabled(val),
+                  onChanged: (val) {
+                    _settings.setAudioFeedbackEnabled(val).then((_) {
+                      if (val) {
+                        FeedbackService().playAudioFeedback();
+                      }
+                    });
+                  },
                 ),
                 const Divider(height: 1),
                 _buildSwitchTile(
@@ -1108,18 +1107,50 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                   subtitle: l10n.audioNavigationSubtitle,
                   icon: Icons.record_voice_over_outlined,
                   value: _settings.audioNavigationEnabled,
-                  onChanged: (val) =>
-                      _settings.setAudioNavigationEnabled(val),
+                  onChanged: (val) {
+                    _settings.setAudioNavigationEnabled(val).then((_) {
+                      if (val) {
+                        FeedbackService().speak(l10n.audioNavigation);
+                      }
+                    });
+                  },
                 ),
                 if (_settings.audioNavigationEnabled) ...[
                   const Divider(height: 1),
                   _buildSliderTile(
                     context,
                     title: l10n.speechRate,
-                    value: _settings.audioSpeechRate,
+                    value: _settings.audioNavigationSpeechRate,
                     onChanged: (val) => _settings.setAudioSpeechRate(val),
+                    onChangeEnd: (val) {
+                      if (_settings.audioNavigationEnabled) {
+                        FeedbackService().speak(
+                          l10n.audioNavigation,
+                        );
+                      }
+                    },
                   ),
                 ],
+                const Divider(height: 1),
+                Builder(
+                  builder: (context) {
+                    final hasScreenReader = MediaQuery.of(context).accessibleNavigation;
+                    return ListTile(
+                      leading: const Icon(Icons.accessibility_new),
+                      title: Text(l10n.screenReader),
+                      subtitle: Text(l10n.screenReaderSubtitle),
+                      trailing: Text(
+                        hasScreenReader ? l10n.active : l10n.inactive,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: hasScreenReader
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 20),
@@ -1128,13 +1159,26 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
             _buildSettingsCard(
               theme,
               children: [
-                _buildSwitchTile(
-                  context,
-                  title: l10n.hapticFeedback,
-                  subtitle: l10n.hapticFeedbackSubtitle,
-                  icon: Icons.vibration,
-                  value: _settings.hapticFeedbackEnabled,
-                  onChanged: (val) => _settings.setHapticFeedbackEnabled(val),
+                Builder(
+                  builder: (context) {
+                    final hasHaptic = Platform.isAndroid || Platform.isIOS;
+                    return _buildSwitchTile(
+                      context,
+                      title: l10n.hapticFeedback,
+                      subtitle: hasHaptic
+                          ? l10n.hapticFeedbackSubtitle
+                          : l10n.hapticFeedbackDisabledSubtitle,
+                      icon: Icons.vibration,
+                      value: hasHaptic && _settings.hapticFeedbackEnabled,
+                      onChanged: hasHaptic
+                          ? (val) {
+                              _settings.setHapticFeedbackEnabled(val).then((_) {
+                                FeedbackService().triggerHaptic();
+                              });
+                            }
+                          : null,
+                    );
+                  },
                 ),
                 const Divider(height: 1),
                 _buildSwitchTile(
@@ -1267,14 +1311,14 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
     required String subtitle,
     required IconData icon,
     required bool value,
-    required ValueChanged<bool> onChanged,
+    ValueChanged<bool>? onChanged,
   }) {
     return ListTile(
       leading: Icon(icon),
       title: Text(title),
       subtitle: Text(subtitle),
-      trailing: Switch(value: value, onChanged: (val) => onChanged(val)),
-      onTap: () => onChanged(!value),
+      trailing: Switch(value: value, onChanged: onChanged),
+      onTap: onChanged != null ? () => onChanged(!value) : null,
     );
   }
 
@@ -1283,6 +1327,7 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
     required String title,
     required double value,
     required ValueChanged<double> onChanged,
+    ValueChanged<double>? onChangeEnd,
   }) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
@@ -1319,6 +1364,7 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                   divisions: 6,
                   label: '${value.toStringAsFixed(1)}x',
                   onChanged: onChanged,
+                  onChangeEnd: onChangeEnd,
                 ),
               ),
               Text(l10n.fast, style: theme.textTheme.labelSmall),
@@ -1573,6 +1619,18 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
                         const Divider(height: 1),
                         _buildPermissionTile(
                           context,
+                          title: l10n.permissionBluetooth,
+                          subtitle: l10n.permissionBluetoothSubtitle,
+                          status: _bluetoothPermissionStatus,
+                          onPressed: () async {
+                            await _requestBluetoothPermission();
+                            await _refreshPermissionStatuses();
+                            setModalState(() {});
+                          },
+                        ),
+                        const Divider(height: 1),
+                        _buildPermissionTile(
+                          context,
                           title: l10n.permissionGallery,
                           subtitle: l10n.permissionGallerySubtitle,
                           status: _galleryPermissionStatus,
@@ -1611,6 +1669,7 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
     final microphoneStatus = await Permission.microphone.status;
     final notificationStatus = await Permission.notification.status;
     final locationStatus = await Permission.location.status;
+    final bluetoothStatus = await _getBluetoothPermissionStatus();
     final galleryStatus = await _getGalleryPermissionStatus();
 
     if (!mounted) return;
@@ -1619,8 +1678,21 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
       _microphonePermissionStatus = microphoneStatus;
       _notificationPermissionStatus = notificationStatus;
       _locationPermissionStatus = locationStatus;
+      _bluetoothPermissionStatus = bluetoothStatus;
       _galleryPermissionStatus = galleryStatus;
     });
+  }
+
+  Future<PermissionStatus> _getBluetoothPermissionStatus() async {
+    final scanStatus = await Permission.bluetoothScan.status;
+    final connectStatus = await Permission.bluetoothConnect.status;
+    if (scanStatus.isGranted && connectStatus.isGranted) {
+      return PermissionStatus.granted;
+    }
+    if (scanStatus.isPermanentlyDenied || connectStatus.isPermanentlyDenied) {
+      return PermissionStatus.permanentlyDenied;
+    }
+    return PermissionStatus.denied;
   }
 
   Future<PermissionStatus> _getGalleryPermissionStatus() async {
@@ -1657,6 +1729,24 @@ class _SettingsTabContentState extends State<_SettingsTabContent> {
     }
 
     return _requestPermission(Permission.photos, 'photo library');
+  }
+
+  Future<bool> _requestBluetoothPermission() async {
+    final scanStatus = await Permission.bluetoothScan.request();
+    final connectStatus = await Permission.bluetoothConnect.request();
+    if (scanStatus.isGranted && connectStatus.isGranted) {
+      return true;
+    }
+    if (scanStatus.isPermanentlyDenied || connectStatus.isPermanentlyDenied) {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Bluetooth permission is required to use beacon features.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+    return false;
   }
 
   Future<bool> _requestPermission(Permission permission, String name) async {

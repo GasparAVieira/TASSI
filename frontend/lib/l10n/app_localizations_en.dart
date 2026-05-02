@@ -49,12 +49,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get grantLocationPermission => 'Grant Location Permission';
 
   @override
+  String get grantBluetoothPermission => 'Grant Bluetooth Permission';
+
+  @override
+  String get grantRequiredPermissions => 'Grant Required Permissions';
+
+  @override
   String get locationPermissionRequiredMessage =>
       'Location permission is required to use this app.';
 
   @override
   String get locationPermissionRequiredOpenSettingsMessage =>
       'Location permission is required to use this app. Open settings to enable it.';
+
+  @override
+  String get bluetoothPermissionRequiredTitle =>
+      'Bluetooth Permission Required';
+
+  @override
+  String get bluetoothPermissionRequiredSubtitle =>
+      'Please allow Bluetooth access to continue.';
+
+  @override
+  String get locationAndBluetoothPermissionRequiredTitle =>
+      'Location and Bluetooth Permission Required';
+
+  @override
+  String get locationAndBluetoothPermissionRequiredSubtitle =>
+      'Please allow both location and Bluetooth access to continue.';
 
   @override
   String get permissionCamera => 'Camera';
@@ -83,6 +105,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get permissionLocationSubtitle =>
       'Required to get your current coordinates';
+
+  @override
+  String get permissionBluetooth => 'Bluetooth';
+
+  @override
+  String get permissionBluetoothSubtitle =>
+      'Required for scanning and connecting to beacons';
 
   @override
   String get permissionGallery => 'Photo Library';
@@ -144,6 +173,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audioNavigationSubtitle => 'Enable Spoken Feedback';
 
   @override
+  String get screenReader => 'Screen Reader';
+
+  @override
+  String get active => 'Active';
+
+  @override
+  String get inactive => 'Inactive';
+
+  @override
+  String get screenReaderSubtitle =>
+      'Supports device native TalkBack/VoiceOver';
+
+  @override
+  String get screenReaderDisabledSubtitle =>
+      'Supports device native TalkBack/VoiceOver';
+
+  @override
+  String get hapticFeedbackDisabledSubtitle =>
+      'Haptic feedback is unavailable on this device';
+
+  @override
   String get speechRate => 'Speech Rate';
 
   @override
@@ -174,6 +224,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accessibilityProfileDescriptionBoth =>
+      'Wheelchair and blind modes are enabled: routes will use wheelchair-friendly path weights with blind-friendly audio navigation support.';
+
+  @override
+  String get accessibilityProfileDescriptionLowVision =>
       'Low vision mode is enabled: high contrast, large text, audio feedback, navigation, and haptic assistance.';
 
   @override

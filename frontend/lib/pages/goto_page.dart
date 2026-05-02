@@ -38,6 +38,9 @@ class _GoToPageState extends State<GoToPage> {
   }
 
   Future<void> _loadRooms() async {
+    if (_isLoading) return;
+
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
@@ -50,7 +53,8 @@ class _GoToPageState extends State<GoToPage> {
         _allRooms = rooms;
         _displayedRooms = List.from(rooms);
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Error loading rooms: $e');
       if (mounted) {
         showErrorPopup(context);
       }
@@ -66,6 +70,7 @@ class _GoToPageState extends State<GoToPage> {
   void _filterRooms(String query) {
     final normalized = query.toLowerCase().trim();
 
+    if (!mounted) return;
     setState(() {
       _expandedIndex = null;
       _routeResult = null;
@@ -88,6 +93,7 @@ class _GoToPageState extends State<GoToPage> {
       return;
     }
 
+    if (!mounted) return;
     setState(() {
       _isRequestingRoute = true;
       _routeResult = null;

@@ -7,6 +7,7 @@ import 'l10n/app_localizations.dart';
 import 'pages/welcome_page.dart';
 import 'services/auth_service.dart';
 import 'services/diary_service.dart';
+import 'services/feedback_service.dart';
 import 'services/settings_service.dart';
 import 'services/notification_service.dart';
 
@@ -23,6 +24,7 @@ void main() async {
   
   final settings = SettingsService();
   await settings.load();
+  await FeedbackService().init();
   
   final authService = AuthService.instance;
   await authService.loadSession();
@@ -222,6 +224,54 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
+Widget _buildPermissionScreen({
+  required BuildContext context,
+  required IconData icon,
+  required String title,
+  required String subtitle,
+  required String buttonText,
+  required VoidCallback onPressed,
+}) {
+  final theme = Theme.of(context);
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(AppLocalizations.of(context)!.appPermissions),
+      elevation: 0,
+      backgroundColor: theme.colorScheme.surface,
+    ),
+    body: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 64, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(height: 24),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: onPressed,
+              child: Text(buttonText),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class RootPage extends StatefulWidget {
   const RootPage({super.key});
 
@@ -234,6 +284,7 @@ class _RootPageState extends State<RootPage> {
   bool _showWelcome = false;
   bool _hasSeenWelcome = false;
   PermissionStatus? _locationPermissionStatus;
+  PermissionStatus? _bluetoothPermissionStatus;
 
   @override
   void initState() {
@@ -254,7 +305,7 @@ class _RootPageState extends State<RootPage> {
     final isLoggedIn = AuthService.instance.isLoggedIn;
     _showWelcome = !isLoggedIn && !_hasSeenWelcome;
     if (!_showWelcome) {
-      await _refreshLocationPermission();
+      await _refreshPermissions();
     }
     return _showWelcome;
   }
@@ -267,12 +318,26 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
-  Future<void> _refreshLocationPermission() async {
-    final status = await Permission.location.status;
+  Future<void> _refreshPermissions() async {
+    final locationStatus = await Permission.location.status;
+    final bluetoothStatus = await _getBluetoothPermissionStatus();
     if (!mounted) return;
     setState(() {
-      _locationPermissionStatus = status;
+      _locationPermissionStatus = locationStatus;
+      _bluetoothPermissionStatus = bluetoothStatus;
     });
+  }
+
+  Future<PermissionStatus> _getBluetoothPermissionStatus() async {
+    final scanStatus = await Permission.bluetoothScan.status;
+    final connectStatus = await Permission.bluetoothConnect.status;
+    if (scanStatus.isGranted && connectStatus.isGranted) {
+      return PermissionStatus.granted;
+    }
+    if (scanStatus.isPermanentlyDenied || connectStatus.isPermanentlyDenied) {
+      return PermissionStatus.permanentlyDenied;
+    }
+    return PermissionStatus.denied;
   }
 
   Future<void> _requestLocationPermission() async {
@@ -283,11 +348,26 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
+  Future<void> _requestBluetoothPermissions() async {
+    final scanStatus = await Permission.bluetoothScan.request();
+    final connectStatus = await Permission.bluetoothConnect.request();
+    final bluetoothStatus = scanStatus.isGranted && connectStatus.isGranted
+        ? PermissionStatus.granted
+        : scanStatus.isPermanentlyDenied || connectStatus.isPermanentlyDenied
+            ? PermissionStatus.permanentlyDenied
+            : PermissionStatus.denied;
+    if (!mounted) return;
+    setState(() {
+      _bluetoothPermissionStatus = bluetoothStatus;
+    });
+  }
+
   void _onWelcomeComplete() {
     if (!mounted) return;
-    _refreshLocationPermission().then((_) {
+    _refreshPermissions().then((_) {
       if (!mounted) return;
       setState(() {
+        _hasSeenWelcome = true;
         _showWelcome = false;
       });
     });
@@ -314,7 +394,7 @@ class _RootPageState extends State<RootPage> {
           return WelcomePage(onContinue: _onWelcomeComplete);
         }
 
-        if (_locationPermissionStatus == null) {
+        if (_locationPermissionStatus == null || _bluetoothPermissionStatus == null) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
@@ -323,53 +403,33 @@ class _RootPageState extends State<RootPage> {
         if (!_locationPermissionStatus!.isGranted) {
           final isPermanentlyDenied =
               _locationPermissionStatus == PermissionStatus.permanentlyDenied;
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(AppLocalizations.of(context)!.appPermissions),
-              elevation: 0,
-              backgroundColor: Theme.of(context).colorScheme.surface,
-            ),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.location_off,
-                        size: 64,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    const SizedBox(height: 24),
-                    Text(
-                      l10n.locationPermissionRequiredTitle,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.locationPermissionRequiredSubtitle,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: isPermanentlyDenied
-                          ? openAppSettings
-                          : _requestLocationPermission,
-                      child: Text(isPermanentlyDenied
-                          ? l10n.openAppSettings
-                          : l10n.grantLocationPermission),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          return _buildPermissionScreen(
+            context: context,
+            icon: Icons.location_off,
+            title: l10n.locationPermissionRequiredTitle,
+            subtitle: l10n.locationPermissionRequiredSubtitle,
+            buttonText: isPermanentlyDenied
+                ? l10n.openAppSettings
+                : l10n.grantLocationPermission,
+            onPressed:
+                isPermanentlyDenied ? openAppSettings : _requestLocationPermission,
+          );
+        }
+
+        if (!_bluetoothPermissionStatus!.isGranted) {
+          final isPermanentlyDenied =
+              _bluetoothPermissionStatus == PermissionStatus.permanentlyDenied;
+          return _buildPermissionScreen(
+            context: context,
+            icon: Icons.bluetooth_disabled,
+            title: l10n.bluetoothPermissionRequiredTitle,
+            subtitle: l10n.bluetoothPermissionRequiredSubtitle,
+            buttonText: isPermanentlyDenied
+                ? l10n.openAppSettings
+                : l10n.grantBluetoothPermission,
+            onPressed: isPermanentlyDenied
+                ? openAppSettings
+                : _requestBluetoothPermissions,
           );
         }
 
@@ -390,6 +450,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
   int currentPageIndex = 0;
   int profileInitialTabIndex = 0;
   PermissionStatus? _locationPermissionStatus;
+  PermissionStatus? _bluetoothPermissionStatus;
   final NotificationService _notificationService = NotificationService();
   final DiaryService _diaryService = DiaryService();
   bool _wasLoggedIn = AuthService.instance.isLoggedIn;
@@ -398,7 +459,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _refreshLocationPermission();
+    _refreshPermissions();
     _notificationService.addListener(_onNotificationChanged);
     _diaryService.addListener(_onDiaryChanged);
     AuthService.instance.addListener(_onAuthChanged);
@@ -433,12 +494,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
       NotificationService().clearSessionExpiredLogout();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        setState(() {
-          currentPageIndex = 3;
-          profileInitialTabIndex = 0;
-        });
         final l10n = AppLocalizations.of(context);
         if (l10n == null) return;
+        
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -457,9 +518,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
                       currentPageIndex = 3;
                       profileInitialTabIndex = 0;
                     });
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   },
                   style: TextButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: isDark ? theme.colorScheme.primary : theme.colorScheme.secondary,
                     minimumSize: Size.zero,
                     padding: EdgeInsets.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -483,16 +545,30 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _refreshLocationPermission();
+      _refreshPermissions();
     }
   }
 
-  Future<void> _refreshLocationPermission() async {
+  Future<void> _refreshPermissions() async {
     final status = await Permission.location.status;
+    final bluetoothStatus = await _getBluetoothPermissionStatus();
     if (!mounted) return;
     setState(() {
       _locationPermissionStatus = status;
+      _bluetoothPermissionStatus = bluetoothStatus;
     });
+  }
+
+  Future<PermissionStatus> _getBluetoothPermissionStatus() async {
+    final scanStatus = await Permission.bluetoothScan.status;
+    final connectStatus = await Permission.bluetoothConnect.status;
+    if (scanStatus.isGranted && connectStatus.isGranted) {
+      return PermissionStatus.granted;
+    }
+    if (scanStatus.isPermanentlyDenied || connectStatus.isPermanentlyDenied) {
+      return PermissionStatus.permanentlyDenied;
+    }
+    return PermissionStatus.denied;
   }
 
   Future<void> _requestLocationPermission() async {
@@ -512,6 +588,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
     }
   }
 
+  Future<void> _requestBluetoothPermissions() async {
+    final scanStatus = await Permission.bluetoothScan.request();
+    final connectStatus = await Permission.bluetoothConnect.request();
+    final bluetoothStatus = scanStatus.isGranted && connectStatus.isGranted
+        ? PermissionStatus.granted
+        : scanStatus.isPermanentlyDenied || connectStatus.isPermanentlyDenied
+            ? PermissionStatus.permanentlyDenied
+            : PermissionStatus.denied;
+    if (!mounted) return;
+    setState(() {
+      _bluetoothPermissionStatus = bluetoothStatus;
+    });
+  }
+
   void _openSettings() {
     setState(() {
       currentPageIndex = 3; // Profile page index
@@ -525,48 +615,41 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
     final l10n = AppLocalizations.of(context)!;
     final isDark = theme.brightness == Brightness.dark;
 
-    if (_locationPermissionStatus == null) {
+    if (_locationPermissionStatus == null || _bluetoothPermissionStatus == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (!_locationPermissionStatus!.isGranted) {
-      final isPermanentlyDenied = _locationPermissionStatus == PermissionStatus.permanentlyDenied;
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(AppLocalizations.of(context)!.appPermissions),
-          elevation: 0,
-          backgroundColor: theme.colorScheme.surface,
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.location_off, size: 64, color: theme.colorScheme.onSurfaceVariant),
-                const SizedBox(height: 24),
-                Text(
-                  'Location permission is required to use this app.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Please allow location access and then continue.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: isPermanentlyDenied ? openAppSettings : _requestLocationPermission,
-                  child: Text(isPermanentlyDenied ? AppLocalizations.of(context)!.openAppSettings : 'Grant Location Permission'),
-                ),
-              ],
-            ),
-          ),
-        ),
+      final isPermanentlyDenied =
+          _locationPermissionStatus == PermissionStatus.permanentlyDenied;
+      return _buildPermissionScreen(
+        context: context,
+        icon: Icons.location_off,
+        title: l10n.locationPermissionRequiredTitle,
+        subtitle: l10n.locationPermissionRequiredSubtitle,
+        buttonText: isPermanentlyDenied
+            ? l10n.openAppSettings
+            : l10n.grantLocationPermission,
+        onPressed:
+            isPermanentlyDenied ? openAppSettings : _requestLocationPermission,
+      );
+    }
+
+    if (!_bluetoothPermissionStatus!.isGranted) {
+      final isPermanentlyDenied =
+          _bluetoothPermissionStatus == PermissionStatus.permanentlyDenied;
+      return _buildPermissionScreen(
+        context: context,
+        icon: Icons.bluetooth_disabled,
+        title: l10n.bluetoothPermissionRequiredTitle,
+        subtitle: l10n.bluetoothPermissionRequiredSubtitle,
+        buttonText: isPermanentlyDenied
+            ? l10n.openAppSettings
+            : l10n.grantBluetoothPermission,
+        onPressed:
+            isPermanentlyDenied ? openAppSettings : _requestBluetoothPermissions,
       );
     }
 
@@ -627,7 +710,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
           MapPage(onOpenSettings: _openSettings),
           const GoToPage(),
           const DiaryPage(),
-          ProfilePage(initialTabIndex: profileInitialTabIndex),
+          ProfilePage(
+            key: ValueKey('profile_tab_$profileInitialTabIndex'),
+            initialTabIndex: profileInitialTabIndex,
+          ),
         ][currentPageIndex],
       ),
     );

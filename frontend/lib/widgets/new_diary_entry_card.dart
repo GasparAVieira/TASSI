@@ -5,6 +5,7 @@ class NewDiaryEntryCard extends StatefulWidget {
   final VoidCallback onCancel;
   final bool isPrivate;
   final bool isAttachmentProcessing;
+  final bool isSaving;
   final ValueChanged<bool> onPrivacyChanged;
   final Function(String title, String notes) onSave;
 
@@ -15,6 +16,7 @@ class NewDiaryEntryCard extends StatefulWidget {
     required this.isPrivate,
     required this.isAttachmentProcessing,
     required this.onPrivacyChanged,
+    this.isSaving = false,
   });
 
   @override
@@ -55,6 +57,15 @@ class _NewDiaryEntryCardState extends State<NewDiaryEntryCard> {
     if (_titleError == null && _notesError == null) {
       widget.onSave(titleText, notesText);
     }
+  }
+
+  String _getFormattedDate() {
+    final now = DateTime.now();
+    final monthNames = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${monthNames[now.month - 1]} ${now.day}, ${now.year}';
   }
 
   Widget _buildErrorText(ThemeData theme, String message) {
@@ -202,7 +213,7 @@ class _NewDiaryEntryCardState extends State<NewDiaryEntryCard> {
               ),
               Row(
                 children: [
-                  _buildEntryChip(theme, 'Mar 20, 2026'),
+                  _buildEntryChip(theme, _getFormattedDate()),
                   const SizedBox(width: 8),
                   _buildEntryChip(
                     theme,
@@ -308,14 +319,20 @@ class _NewDiaryEntryCardState extends State<NewDiaryEntryCard> {
           child: SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: widget.isAttachmentProcessing ? null : _validateAndSave,
+              onPressed: (widget.isAttachmentProcessing || widget.isSaving) ? null : _validateAndSave,
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('Save Entry'),
+              child: widget.isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save Entry'),
             ),
           ),
         ),

@@ -21,12 +21,12 @@ class NotificationService extends ChangeNotifier {
   static const Duration _pollInterval = Duration(seconds: 30);
   static const String _cacheKey = 'notifications_cache';
 
-  List<NotificationData> get notifications => _notifications;
+  List<NotificationData> get notifications => _notifications.where((n) => n.type != 'chat_message').toList();
   bool get isLoading => _isLoading;
 
   bool _sessionExpiredLogout = false;
 
-  int get unreadCount => _notifications.where((n) => n.isUnread).length;
+  int get unreadCount => notifications.where((n) => n.isUnread).length;
 
   String get unreadCountDisplay {
     int count = unreadCount;
@@ -42,7 +42,6 @@ class NotificationService extends ChangeNotifier {
   Future<void> init() async {
     await _loadCache();
     AuthService.instance.addListener(_handleAuthChange);
-    DiaryService().addListener(_handleDiaryChange);
     _handleAuthChange();
   }
 
@@ -54,12 +53,8 @@ class NotificationService extends ChangeNotifier {
       _stopPolling();
       _notifications = [];
       _saveCache();
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     }
-  }
-
-  void _handleDiaryChange() {
-    notifyListeners();
   }
 
   void _startPolling() {
@@ -122,8 +117,10 @@ class NotificationService extends ChangeNotifier {
   Future<void> fetchNotifications() async {
     if (!AuthService.instance.isLoggedIn) return;
     
+    if (_isLoading) return;
     _isLoading = true;
-    notifyListeners();
+    
+    Future.microtask(() => notifyListeners());
 
     try {
       // Fetch only unread notifications to sync with server
@@ -134,36 +131,68 @@ class NotificationService extends ChangeNotifier {
 
       if (await _handleUnauthorizedResponse(response)) {
         _isLoading = false;
-        notifyListeners();
+        Future.microtask(() => notifyListeners());
         return;
       }
 
       if (response.statusCode == 200) {
         final List<dynamic> serverUnread = jsonDecode(response.body);
         final List<NotificationData> unreadNotifs = serverUnread.map((json) => NotificationData.fromJson(json)).toList();
+        final Set<String> serverUnreadIds = unreadNotifs.map((n) => n.id).toSet();
 
-        final existingIds = _notifications.map((n) => n.id).toSet();
-        final newNotifs = unreadNotifs.where((n) => !existingIds.contains(n.id)).toList();
+        bool changed = false;
+        final List<NotificationData> updatedList = [];
 
-        // Merge with cache: keep all read notifications, update/add unread from server.
-        final Map<String, NotificationData> merged = {
-          for (var n in _notifications) n.id: n
-        };
-
-        for (var n in unreadNotifs) {
-          merged[n.id] = n;
-        }
-
-        _notifications = merged.values.toList();
-        _notifications.sort((a, b) => (b.shownAt ?? DateTime.now()).compareTo(a.shownAt ?? DateTime.now()));
-
-        if (newNotifs.isNotEmpty && SettingsService().pushNotificationsEnabled) {
-          for (var notification in newNotifs) {
-            _showLocalPushNotification(notification);
+        // 1. Process existing notifications
+        for (var n in _notifications) {
+          if (n.isUnread && !serverUnreadIds.contains(n.id)) {
+            // No longer unread on server, mark as read locally
+            updatedList.add(NotificationData(
+              id: n.id,
+              type: n.type,
+              title: n.title,
+              message: n.message,
+              priority: n.priority,
+              action: n.action,
+              shownAt: n.shownAt,
+              readAt: DateTime.now(),
+              dismissedAt: n.dismissedAt,
+              expiresAt: n.expiresAt,
+            ));
+            changed = true;
+          } else {
+            // Keep as is, or update if it's in serverUnread (next step)
+            updatedList.add(n);
           }
         }
 
-        await _saveCache();
+        // 2. Add new notifications or update existing unread ones
+        final existingIds = _notifications.map((n) => n.id).toSet();
+        for (var n in unreadNotifs) {
+          if (!existingIds.contains(n.id)) {
+            updatedList.add(n);
+            changed = true;
+            if (SettingsService().pushNotificationsEnabled) {
+              _showLocalPushNotification(n);
+            }
+          } else {
+            // Update existing unread with latest data from server
+            int idx = updatedList.indexWhere((en) => en.id == n.id);
+            if (idx != -1) {
+              // Only update if server has new read status or if we haven't marked it read locally yet
+              if (updatedList[idx].readAt == null && n.readAt != null) {
+                 updatedList[idx] = n;
+                 changed = true;
+              }
+            }
+          }
+        }
+
+        if (changed) {
+          _notifications = updatedList;
+          _notifications.sort((a, b) => (b.shownAt ?? DateTime.now()).compareTo(a.shownAt ?? DateTime.now()));
+          await _saveCache();
+        }
       } else {
         debugPrint('Failed to fetch notifications: ${response.body}');
       }
@@ -171,7 +200,7 @@ class NotificationService extends ChangeNotifier {
       debugPrint('Error fetching notifications: $e');
     } finally {
       _isLoading = false;
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     }
   }
 
@@ -192,7 +221,7 @@ class NotificationService extends ChangeNotifier {
           final updated = NotificationData.fromJson(jsonDecode(response.body));
           _notifications[index] = updated;
           await _saveCache();
-          notifyListeners();
+          Future.microtask(() => notifyListeners());
         }
       }
     } catch (e) {

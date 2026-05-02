@@ -126,7 +126,7 @@ class AccessibilityProfilePicker extends StatelessWidget {
     bool lowVisionEnabled,
     bool blindEnabled,
   ) {
-    if (lowVisionEnabled || (wheelchairEnabled && blindEnabled)) {
+    if (wheelchairEnabled && blindEnabled) {
       return l10n.accessibilityProfileDescriptionBoth;
     }
     if (wheelchairEnabled) {
@@ -134,6 +134,9 @@ class AccessibilityProfilePicker extends StatelessWidget {
     }
     if (blindEnabled) {
       return l10n.accessibilityProfileDescriptionBlind;
+    }
+    if (lowVisionEnabled) {
+      return l10n.accessibilityProfileDescriptionLowVision;
     }
     return l10n.accessibilityProfileDescriptionNone;
   }

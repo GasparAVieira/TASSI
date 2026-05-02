@@ -25,11 +25,9 @@ class AccessibilityProfileService extends ChangeNotifier {
   bool get blindEnabled => _blindEnabled;
 
   AccessibilityProfile get selectedProfile {
-    if (_lowVisionEnabled || (_wheelchairEnabled && _blindEnabled)) {
-      return AccessibilityProfile.LowVision;
-    }
     if (_wheelchairEnabled) return AccessibilityProfile.Wheelchair;
     if (_blindEnabled) return AccessibilityProfile.Blind;
+    if (_lowVisionEnabled) return AccessibilityProfile.LowVision;
     return AccessibilityProfile.None;
   }
 
@@ -70,41 +68,17 @@ class AccessibilityProfileService extends ChangeNotifier {
       accessibilityProfile: profile,
     );
 
-    switch (profile) {
-      case AccessibilityProfile.Wheelchair:
-      case AccessibilityProfile.WheelchairBiometric:
-        await _settings.setWheelchairRoutesEnabled(true);
-        await _settings.setHighContrast(false);
-        await _settings.setLargeText(false);
-        await _settings.setAudioFeedbackEnabled(false);
-        await _settings.setAudioNavigationEnabled(false);
-        await _settings.setHapticFeedbackEnabled(false);
-        break;
-      case AccessibilityProfile.LowVision:
-        await _settings.setWheelchairRoutesEnabled(false);
-        await _settings.setHighContrast(true);
-        await _settings.setLargeText(true);
-        await _settings.setAudioFeedbackEnabled(true);
-        await _settings.setAudioNavigationEnabled(true);
-        await _settings.setHapticFeedbackEnabled(true);
-        break;
-      case AccessibilityProfile.Blind:
-        await _settings.setWheelchairRoutesEnabled(false);
-        await _settings.setHighContrast(false);
-        await _settings.setLargeText(false);
-        await _settings.setAudioFeedbackEnabled(true);
-        await _settings.setAudioNavigationEnabled(true);
-        await _settings.setHapticFeedbackEnabled(true);
-        break;
-      case AccessibilityProfile.None:
-        await _settings.setWheelchairRoutesEnabled(false);
-        await _settings.setHighContrast(false);
-        await _settings.setLargeText(false);
-        await _settings.setAudioFeedbackEnabled(false);
-        await _settings.setAudioNavigationEnabled(false);
-        await _settings.setHapticFeedbackEnabled(false);
-        break;
-    }
+    final enableWheelchairRoutes = _wheelchairEnabled;
+    final enableLowVision = _lowVisionEnabled;
+    final enableBlind = _blindEnabled;
+    final enableAudio = enableLowVision || enableBlind;
+
+    await _settings.setWheelchairRoutesEnabled(enableWheelchairRoutes);
+    await _settings.setHighContrast(enableLowVision);
+    await _settings.setLargeText(enableLowVision);
+    await _settings.setAudioFeedbackEnabled(enableAudio);
+    await _settings.setAudioNavigationEnabled(enableAudio);
+    await _settings.setHapticFeedbackEnabled(enableAudio);
 
     _notifyChanged();
   }

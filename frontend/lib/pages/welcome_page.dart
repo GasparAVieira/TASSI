@@ -34,6 +34,12 @@ class _WelcomePageState extends State<WelcomePage> {
   void initState() {
     super.initState();
     _accessibilityService.resetFromSettings();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final accessibleNavigation = WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.accessibleNavigation;
+      if (accessibleNavigation) {
+        _accessibilityService.setBlindEnabled(true, persist: true);
+      }
+    });
   }
 
   @override
@@ -80,6 +86,10 @@ class _WelcomePageState extends State<WelcomePage> {
   }
 
   Future<void> _onContinueWithoutAccount() async {
+    if (WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.accessibleNavigation) {
+      _accessibilityService.setBlindEnabled(true, persist: true);
+    }
+
     await _setSeenWelcomePage();
     if (AuthService.instance.isLoggedIn) {
       await AuthService.instance.logout();

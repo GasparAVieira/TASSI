@@ -60,6 +60,8 @@ class SettingsService extends ChangeNotifier {
   static const String _kAudioFeedbackKey = 'settings_audio_feedback';
   static const String _kAudioNavigationKey = 'settings_audio_navigation';
   static const String _kAudioSpeechRateKey = 'settings_audio_speech_rate';
+  static const String _kScreenReaderKey = 'settings_screen_reader';
+  static const String _kScreenReaderSpeechRateKey = 'settings_screen_reader_speech_rate';
 
   // Accessibility preference keys
   static const String _kHapticFeedbackKey = 'settings_haptic_feedback';
@@ -78,7 +80,9 @@ class SettingsService extends ChangeNotifier {
   bool _wheelchairRoutesEnabled = false;
   bool _audioFeedbackEnabled = true;
   bool _audioNavigationEnabled = false;
-  double _audioSpeechRate = 1.0;
+  double _audioNavigationSpeechRate = 1.0;
+  bool _screenReaderEnabled = false;
+  double _screenReaderSpeechRate = 1.0;
   bool _hapticFeedbackEnabled = true;
 
   String _preferredLanguageCode = 'pt';
@@ -101,7 +105,10 @@ class SettingsService extends ChangeNotifier {
   // Audio preference getters
   bool get audioFeedbackEnabled => _audioFeedbackEnabled;
   bool get audioNavigationEnabled => _audioNavigationEnabled;
-  double get audioSpeechRate => _audioSpeechRate;
+  double get audioNavigationSpeechRate => _audioNavigationSpeechRate;
+  double get audioSpeechRate => _audioNavigationSpeechRate;
+  bool get screenReaderEnabled => _screenReaderEnabled;
+  double get screenReaderSpeechRate => _screenReaderSpeechRate;
 
   // Accessibility getters
   bool get hapticFeedbackEnabled => _hapticFeedbackEnabled;
@@ -129,7 +136,9 @@ class SettingsService extends ChangeNotifier {
     _wheelchairRoutesEnabled = prefs.getBool(_kWheelchairRoutesKey) ?? false;
     _audioFeedbackEnabled = prefs.getBool(_kAudioFeedbackKey) ?? true;
     _audioNavigationEnabled = prefs.getBool(_kAudioNavigationKey) ?? false;
-    _audioSpeechRate = prefs.getDouble(_kAudioSpeechRateKey) ?? 1.0;
+    _audioNavigationSpeechRate = prefs.getDouble(_kAudioSpeechRateKey) ?? 1.0;
+    _screenReaderEnabled = prefs.getBool(_kScreenReaderKey) ?? false;
+    _screenReaderSpeechRate = prefs.getDouble(_kScreenReaderSpeechRateKey) ?? _audioNavigationSpeechRate;
     _hapticFeedbackEnabled = prefs.getBool(_kHapticFeedbackKey) ?? true;
 
     _hasPreferredLanguageSetting = prefs.containsKey(_kPreferredLanguageKey);
@@ -232,9 +241,23 @@ class SettingsService extends ChangeNotifier {
   }
 
   Future<void> setAudioSpeechRate(double value) async {
-    _audioSpeechRate = value;
+    _audioNavigationSpeechRate = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_kAudioSpeechRateKey, value);
+    notifyListeners();
+  }
+
+  Future<void> setScreenReaderSpeechRate(double value) async {
+    _screenReaderSpeechRate = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_kScreenReaderSpeechRateKey, value);
+    notifyListeners();
+  }
+
+  Future<void> setScreenReaderEnabled(bool value) async {
+    _screenReaderEnabled = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kScreenReaderKey, value);
     notifyListeners();
   }
 

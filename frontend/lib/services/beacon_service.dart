@@ -48,19 +48,31 @@ class BeaconService {
   }
 
   Future<void> startScanning() async {
-    /*if (_isScanning) return;
+    if (_isScanning) return;
 
-    await requestPermissions();
+    final scanPermission = await Permission.bluetoothScan.request();
+    final connectPermission = await Permission.bluetoothConnect.request();
+    final locationPermission = await Permission.locationWhenInUse.request();
+
+    if (scanPermission != PermissionStatus.granted ||
+        connectPermission != PermissionStatus.granted ||
+        locationPermission != PermissionStatus.granted) {
+      print('Beacon permissions not granted. Skipping scan.');
+      return;
+    }
 
     _isScanning = true;
 
-    await FlutterBluePlus.startScan(
-      timeout: const Duration(seconds: 0),
-      continuousUpdates: true,
-    );*/
+    try {
+      await FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: 0),
+        continuousUpdates: true,
+      );
+    } catch (e) {
+      print('Beacon scan start failed: $e');
+    }
 
-
-    Timer(Duration(seconds: 1), () {
+    Timer(const Duration(seconds: 1), () {
       _sendBeaconToBackend(uuid: _fallbackUuid);
     });
 
@@ -86,16 +98,21 @@ class BeaconService {
 
       _lastBeaconId = closestBeacon.id;
 
-      await _sendBeaconToBackend(
-        uuid: closestBeacon.id,
-        );
+      await _sendBeaconToBackend(uuid: closestBeacon.id);
     });
   }
 
   Future<void> stopScanning() async {
+    if (!_isScanning) return;
     _isScanning = false;
     await _scanSubscription?.cancel();
-    await FlutterBluePlus.stopScan();
+    _scanSubscription = null;
+
+    try {
+      await FlutterBluePlus.stopScan();
+    } catch (e) {
+      print('Beacon stop scan failed: $e');
+    }
   }
 
   void dispose() {

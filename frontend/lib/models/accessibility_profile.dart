@@ -30,9 +30,6 @@ enum AccessibilityProfile {
     required bool wheelchair,
     required bool blind,
   }) {
-    if (wheelchair && blind) {
-      return AccessibilityProfile.LowVision;
-    }
     if (wheelchair) {
       return AccessibilityProfile.Wheelchair;
     }

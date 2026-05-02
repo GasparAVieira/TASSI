@@ -176,6 +176,18 @@ abstract class AppLocalizations {
   /// **'Grant Location Permission'**
   String get grantLocationPermission;
 
+  /// No description provided for @grantBluetoothPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Grant Bluetooth Permission'**
+  String get grantBluetoothPermission;
+
+  /// No description provided for @grantRequiredPermissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Grant Required Permissions'**
+  String get grantRequiredPermissions;
+
   /// No description provided for @locationPermissionRequiredMessage.
   ///
   /// In en, this message translates to:
@@ -187,6 +199,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Location permission is required to use this app. Open settings to enable it.'**
   String get locationPermissionRequiredOpenSettingsMessage;
+
+  /// No description provided for @bluetoothPermissionRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth Permission Required'**
+  String get bluetoothPermissionRequiredTitle;
+
+  /// No description provided for @bluetoothPermissionRequiredSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please allow Bluetooth access to continue.'**
+  String get bluetoothPermissionRequiredSubtitle;
+
+  /// No description provided for @locationAndBluetoothPermissionRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location and Bluetooth Permission Required'**
+  String get locationAndBluetoothPermissionRequiredTitle;
+
+  /// No description provided for @locationAndBluetoothPermissionRequiredSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please allow both location and Bluetooth access to continue.'**
+  String get locationAndBluetoothPermissionRequiredSubtitle;
 
   /// No description provided for @permissionCamera.
   ///
@@ -235,6 +271,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Required to get your current coordinates'**
   String get permissionLocationSubtitle;
+
+  /// No description provided for @permissionBluetooth.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth'**
+  String get permissionBluetooth;
+
+  /// No description provided for @permissionBluetoothSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Required for scanning and connecting to beacons'**
+  String get permissionBluetoothSubtitle;
 
   /// No description provided for @permissionGallery.
   ///
@@ -350,6 +398,42 @@ abstract class AppLocalizations {
   /// **'Enable Spoken Feedback'**
   String get audioNavigationSubtitle;
 
+  /// No description provided for @screenReader.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen Reader'**
+  String get screenReader;
+
+  /// No description provided for @active.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get active;
+
+  /// No description provided for @inactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get inactive;
+
+  /// No description provided for @screenReaderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Supports device native TalkBack/VoiceOver'**
+  String get screenReaderSubtitle;
+
+  /// No description provided for @screenReaderDisabledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Supports device native TalkBack/VoiceOver'**
+  String get screenReaderDisabledSubtitle;
+
+  /// No description provided for @hapticFeedbackDisabledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptic feedback is unavailable on this device'**
+  String get hapticFeedbackDisabledSubtitle;
+
   /// No description provided for @speechRate.
   ///
   /// In en, this message translates to:
@@ -407,8 +491,14 @@ abstract class AppLocalizations {
   /// No description provided for @accessibilityProfileDescriptionBoth.
   ///
   /// In en, this message translates to:
-  /// **'Low vision mode is enabled: high contrast, large text, audio feedback, navigation, and haptic assistance.'**
+  /// **'Wheelchair and blind modes are enabled: routes will use wheelchair-friendly path weights with blind-friendly audio navigation support.'**
   String get accessibilityProfileDescriptionBoth;
+
+  /// No description provided for @accessibilityProfileDescriptionLowVision.
+  ///
+  /// In en, this message translates to:
+  /// **'Low vision mode is enabled: high contrast, large text, audio feedback, navigation, and haptic assistance.'**
+  String get accessibilityProfileDescriptionLowVision;
 
   /// No description provided for @accessibilityProfileDescriptionNone.
   ///
