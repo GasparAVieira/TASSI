@@ -33,6 +33,14 @@ class Attachment {
   bool isUploading;
   double uploadProgress;
 
+  // Set after a successful upload — this is the URL the diary entry will
+  // reference in `media_items[].url` when it's saved.
+  String? publicUrl;
+
+  // Non-null when the most recent upload attempt failed. The widget shows
+  // this as an inline error with a Retry action.
+  String? errorMessage;
+
   Attachment({
     required this.name,
     required this.type,
@@ -41,9 +49,13 @@ class Attachment {
     this.path,
     this.isUploading = false,
     this.uploadProgress = 1.0,
+    this.publicUrl,
+    this.errorMessage,
   });
 
   String get readableSize => formatFileSize(sizeBytes);
+  bool get hasError => errorMessage != null;
+  bool get isUploaded => publicUrl != null && !isUploading && !hasError;
 }
 
 String formatFileSize(int bytes) {

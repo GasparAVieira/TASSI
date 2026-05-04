@@ -1,11 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_file/open_file.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../models/diary_entry.dart';
+import '../services/media_service.dart';
 import '../services/settings_service.dart';
 import 'new_diary_entry_card.dart';
 
@@ -162,7 +164,7 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
       setState(() {
         attachment.sizeBytes = sizeBytes;
       });
-      _simulateAttachmentUpload(attachment);
+      _uploadAttachment(attachment);
     } else {
       if (!mounted) return;
       setState(() {
@@ -205,7 +207,7 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
       setState(() {
         attachment.sizeBytes = sizeBytes;
       });
-      _simulateAttachmentUpload(attachment);
+      _uploadAttachment(attachment);
     } else {
       if (!mounted) return;
       setState(() {
@@ -249,7 +251,7 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
       setState(() {
         attachment.sizeBytes = sizeBytes;
       });
-      _simulateAttachmentUpload(attachment);
+      _uploadAttachment(attachment);
     } else {
       if (!mounted) return;
       setState(() {
@@ -292,7 +294,7 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
       setState(() {
         attachment.sizeBytes = sizeBytes;
       });
-      _simulateAttachmentUpload(attachment);
+      _uploadAttachment(attachment);
     } else {
       if (!mounted) return;
       setState(() {
@@ -413,23 +415,78 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
     return true;
   }
 
-  Future<void> _simulateAttachmentUpload(Attachment attachment) async {
-    while (attachment.uploadProgress < 1.0) {
-      await Future.delayed(const Duration(milliseconds: 80));
+  Future<void> _uploadAttachment(Attachment attachment) async {
+    final path = attachment.path;
+    if (path == null || path.isEmpty) {
       if (!mounted) return;
       setState(() {
-        attachment.uploadProgress = (attachment.uploadProgress + 0.12).clamp(
-          0.0,
-          1.0,
-        );
+        attachment.isUploading = false;
+        attachment.errorMessage = 'Local file is missing.';
+        _isAttachmentProcessing =
+            _newEntryMedia.any((item) => item.isUploading);
+      });
+      return;
+    }
+
+    // Reset state for a fresh attempt — supports the Retry action.
+    if (mounted) {
+      setState(() {
+        attachment.isUploading = true;
+        attachment.uploadProgress = 0.0;
+        attachment.errorMessage = null;
+        attachment.publicUrl = null;
+        _isAttachmentProcessing = true;
       });
     }
 
-    if (!mounted) return;
-    setState(() {
-      attachment.isUploading = false;
-      _isAttachmentProcessing = _newEntryMedia.any((item) => item.isUploading);
-    });
+    try {
+      final publicUrl = await MediaService().uploadMedia(
+        file: File(path),
+        attachmentType: attachment.type,
+        onProgress: (sent, total) {
+          if (!mounted) return;
+          if (total <= 0) return;
+          setState(() {
+            attachment.uploadProgress = (sent / total).clamp(0.0, 1.0);
+          });
+        },
+      );
+
+      if (!mounted) return;
+      setState(() {
+        attachment.publicUrl = publicUrl;
+        attachment.uploadProgress = 1.0;
+        attachment.isUploading = false;
+        _isAttachmentProcessing =
+            _newEntryMedia.any((item) => item.isUploading);
+      });
+
+      // Announce completion to assistive tech.
+      SemanticsService.announce(
+        '${attachment.type} ${attachment.name} uploaded.',
+        Directionality.of(context),
+      );
+    } on MediaUploadException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        attachment.isUploading = false;
+        attachment.errorMessage = e.message;
+        _isAttachmentProcessing =
+            _newEntryMedia.any((item) => item.isUploading);
+      });
+      SemanticsService.announce(
+        'Upload of ${attachment.name} failed. ${e.message}',
+        Directionality.of(context),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        attachment.isUploading = false;
+        attachment.errorMessage = 'Unexpected error: $e';
+        _isAttachmentProcessing =
+            _newEntryMedia.any((item) => item.isUploading);
+      });
+    }
   }
 
   Future<void> _openAttachment(Attachment attachment) async {
@@ -459,7 +516,137 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
   }
 
   String _formatAttachmentSubtitle(Attachment attachment) {
+    if (attachment.hasError) {
+      return '${attachment.readableSize} • ${attachment.errorMessage}';
+    }
+    if (attachment.isUploading) {
+      final pct = (attachment.uploadProgress * 100).round();
+      return '${attachment.readableSize} • Uploading $pct%';
+    }
+    if (attachment.isUploaded) {
+      return '${attachment.readableSize} • Uploaded';
+    }
     return attachment.readableSize;
+  }
+
+  Widget _buildAttachmentTrailing(
+    ThemeData theme,
+    Attachment attachment,
+    int index,
+  ) {
+    if (attachment.isUploading) {
+      final pct = (attachment.uploadProgress * 100).round();
+      return Semantics(
+        label: 'Uploading ${attachment.name}, $pct percent',
+        liveRegion: true,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(
+                value: attachment.uploadProgress,
+                color: theme.colorScheme.primary,
+                backgroundColor: theme.colorScheme.secondaryContainer,
+                strokeWidth: 3,
+              ),
+              Text(
+                '$pct%',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (attachment.hasError) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: 'Retry upload',
+            onPressed: () => _uploadAttachment(attachment),
+            icon: Icon(
+              Icons.refresh,
+              color: theme.colorScheme.error,
+            ),
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(
+              minWidth: 44,
+              minHeight: 44,
+            ),
+            padding: const EdgeInsets.all(8),
+            iconSize: 20,
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: 'Remove attachment',
+            onPressed: () {
+              setState(() {
+                _pendingDeleteAttachmentIndex = index;
+              });
+            },
+            icon: Icon(
+              Icons.delete_outline,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(
+              minWidth: 44,
+              minHeight: 44,
+            ),
+            padding: const EdgeInsets.all(8),
+            iconSize: 20,
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'Preview attachment',
+          onPressed: () => _openAttachment(attachment),
+          icon: Icon(
+            Icons.remove_red_eye_outlined,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(
+            minWidth: 44,
+            minHeight: 44,
+          ),
+          padding: const EdgeInsets.all(8),
+          iconSize: 20,
+        ),
+        const SizedBox(width: 4),
+        IconButton(
+          tooltip: 'Remove attachment',
+          onPressed: () {
+            setState(() {
+              _pendingDeleteAttachmentIndex = index;
+            });
+          },
+          icon: Icon(
+            Icons.delete_outline,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(
+            minWidth: 44,
+            minHeight: 44,
+          ),
+          padding: const EdgeInsets.all(8),
+          iconSize: 20,
+        ),
+      ],
+    );
   }
 
   Widget _buildAttachmentCarousel(ThemeData theme) {
@@ -558,78 +745,11 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              trailing: attachment.isUploading
-                                  ? SizedBox(
-                                      width: 44,
-                                      height: 44,
-                                      child: Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          CircularProgressIndicator(
-                                            value: attachment.uploadProgress,
-                                            color: theme.colorScheme.primary,
-                                            backgroundColor: theme
-                                                .colorScheme
-                                                .secondaryContainer,
-                                            strokeWidth: 3,
-                                          ),
-                                          Text(
-                                            '${(attachment.uploadProgress * 100).round()}%',
-                                            style: theme.textTheme.labelSmall
-                                                ?.copyWith(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurface,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          onPressed: () =>
-                                              _openAttachment(attachment),
-                                          icon: Icon(
-                                            Icons.remove_red_eye_outlined,
-                                            color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                          ),
-                                          visualDensity: VisualDensity.compact,
-                                          constraints: const BoxConstraints(
-                                            minWidth: 44,
-                                            minHeight: 44,
-                                          ),
-                                          padding: const EdgeInsets.all(8),
-                                          iconSize: 20,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        IconButton(
-                                          onPressed: () {
-                                            setState(() {
-                                              _pendingDeleteAttachmentIndex =
-                                                  index;
-                                            });
-                                          },
-                                          icon: Icon(
-                                            Icons.delete_outline,
-                                            color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                          ),
-                                          visualDensity: VisualDensity.compact,
-                                          constraints: const BoxConstraints(
-                                            minWidth: 44,
-                                            minHeight: 44,
-                                          ),
-                                          padding: const EdgeInsets.all(8),
-                                          iconSize: 20,
-                                        ),
-                                      ],
-                                    ),
+                              trailing: _buildAttachmentTrailing(
+                                theme,
+                                attachment,
+                                index,
+                              ),
                             ),
                     ),
                   ),
