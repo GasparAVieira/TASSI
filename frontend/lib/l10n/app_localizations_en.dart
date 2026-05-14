@@ -173,6 +173,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audioNavigationSubtitle => 'Enable Spoken Feedback';
 
   @override
+  String get destinationReached => 'Destination Reached';
+
+  @override
+  String get allStepsCompleted => 'All Steps Completed';
+
+  @override
   String get screenReader => 'Screen Reader';
 
   @override

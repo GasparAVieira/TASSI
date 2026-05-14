@@ -25,7 +25,10 @@ class NavigationService {
         },
       );
 
-      final response = await http.get(uri);
+      final response = await http.get(
+        uri,
+        headers: AuthService.instance.authHeaders(),
+      );
 
       if (response.statusCode != 200) {
         throw Exception('Failed to get route: ${response.statusCode}');

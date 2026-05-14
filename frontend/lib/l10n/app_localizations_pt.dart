@@ -174,6 +174,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get audioNavigationSubtitle => 'Ativar Feedback Falado';
 
   @override
+  String get destinationReached => 'Destino alcançado';
+
+  @override
+  String get allStepsCompleted => 'Todos os passos concluídos';
+
+  @override
   String get screenReader => 'Leitor de Tela';
 
   @override

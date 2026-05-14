@@ -657,6 +657,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
 
     final hasDiaryUnreadMessages = _diaryService.hasUnreadMessages;
     final hasAnyDiaryPageAlert = _notificationService.unreadCount > 0 || hasDiaryUnreadMessages;
+    final hasActiveNavigation = _activeRouteData != null;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -679,8 +680,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
           selectedIndex: currentPageIndex,
           destinations: <Widget>[
             NavigationDestination(
-              selectedIcon: const Icon(Icons.map),
-              icon: const Icon(Icons.map_outlined),
+              selectedIcon: Badge(
+                label: null,
+                isLabelVisible: hasActiveNavigation,
+                child: const Icon(Icons.map),
+              ),
+              icon: Badge(
+                label: null,
+                isLabelVisible: hasActiveNavigation,
+                child: const Icon(Icons.map_outlined),
+              ),
               label: l10n.navMap,
             ),
             NavigationDestination(
@@ -709,7 +718,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
           ],
         ),
         body: <Widget>[
-          MapPage(onOpenSettings: _openSettings, activeRouteData: _activeRouteData,),
+          MapPage(
+            onOpenSettings: _openSettings,
+            activeRouteData: _activeRouteData,
+            onStopNavigation: () {
+              setState(() {
+                _activeRouteData = null;
+              });
+            },
+          ),
 
           GoToPage(
             onRouteSelected: (routeData) {

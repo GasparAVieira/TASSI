@@ -49,6 +49,8 @@
   "audioFeedbackSubtitle": "Ativar efeitos sonoros e avisos",
   "audioNavigation": "Navegação por Áudio",
   "audioNavigationSubtitle": "Ativar Feedback Falado",
+  "destinationReached": "Destino alcançado",
+  "allStepsCompleted": "Todos os passos concluídos",
   "screenReader": "Leitor de Tela",
   "active": "Ativo",
   "inactive": "Inativo",

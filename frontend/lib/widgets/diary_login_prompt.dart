@@ -49,36 +49,44 @@ class DiaryLoginPrompt extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                l10n.diaryAdvantagesTitle,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Text(
+                      l10n.diaryAdvantagesTitle,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildAdvantageItem(
+                    context,
+                    Icons.cloud_sync_outlined,
+                    l10n.diaryAdvantageCloudSync,
+                  ),
+                  _buildAdvantageItem(
+                    context,
+                    Icons.security_outlined,
+                    l10n.diaryAdvantageSecure,
+                  ),
+                  _buildAdvantageItem(
+                    context,
+                    Icons.lock_outline,
+                    l10n.diaryAdvantagePrivate,
+                  ),
+                  _buildAdvantageItem(
+                    context,
+                    Icons.perm_media_outlined,
+                    l10n.diaryAdvantageAttachments,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 16),
-            _buildAdvantageItem(
-              context,
-              Icons.cloud_sync_outlined,
-              l10n.diaryAdvantageCloudSync,
-            ),
-            _buildAdvantageItem(
-              context,
-              Icons.security_outlined,
-              l10n.diaryAdvantageSecure,
-            ),
-            _buildAdvantageItem(
-              context,
-              Icons.lock_outline,
-              l10n.diaryAdvantagePrivate,
-            ),
-            _buildAdvantageItem(
-              context,
-              Icons.perm_media_outlined,
-              l10n.diaryAdvantageAttachments,
             ),
             const SizedBox(height: 40),
             RichText(
@@ -109,24 +117,28 @@ class DiaryLoginPrompt extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            icon,
-            size: 20,
-            color: theme.colorScheme.secondary,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface,
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: theme.colorScheme.secondary,
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                text,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

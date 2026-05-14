@@ -115,7 +115,7 @@ class _GoToPageState extends State<GoToPage> {
         widget.onRouteSelected!(result);
       }
 
-      _showRouteBottomSheet(result, destination);
+      // Navigation starts automatically now
     } catch (_) {
       if (mounted) {
         showErrorPopup(context);

@@ -49,6 +49,8 @@
   "audioFeedbackSubtitle": "Enable sound effects and cues",
   "audioNavigation": "Audio Navigation",
   "audioNavigationSubtitle": "Enable Spoken Feedback",
+  "destinationReached": "Destination Reached",
+  "allStepsCompleted": "All Steps Completed",
   "screenReader": "Screen Reader",
   "active": "Active",
   "inactive": "Inactive",

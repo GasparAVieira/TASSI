@@ -398,6 +398,18 @@ abstract class AppLocalizations {
   /// **'Enable Spoken Feedback'**
   String get audioNavigationSubtitle;
 
+  /// No description provided for @destinationReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination Reached'**
+  String get destinationReached;
+
+  /// No description provided for @allStepsCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'All Steps Completed'**
+  String get allStepsCompleted;
+
   /// No description provided for @screenReader.
   ///
   /// In en, this message translates to:

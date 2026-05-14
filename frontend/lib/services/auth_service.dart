@@ -73,6 +73,19 @@ class AuthService extends ChangeNotifier {
     _preferredLanguageCode = languageCode;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userPreferredLanguageKey, languageCode);
+
+    if (_isLoggedIn && _token != null) {
+      try {
+        await http.patch(
+          Uri.parse(ApiClient.url('/api/v1/users/me')),
+          headers: authHeaders(),
+          body: jsonEncode({'preferred_language': languageCode}),
+        );
+      } catch (e) {
+        debugPrint('Failed to sync language to backend: $e');
+      }
+    }
+
     notifyListeners();
   }
 
@@ -330,9 +343,10 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Map<String, String> authHeaders() {
+  Map<String, String> authHeaders({String? languageCode}) {
     return {
       'Content-Type': 'application/json',
+      'Accept-Language': languageCode ?? _preferredLanguageCode,
       if (_token != null) 'Authorization': 'Bearer $_token',
     };
   }
