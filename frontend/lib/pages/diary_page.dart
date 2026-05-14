@@ -160,7 +160,18 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
   }
 
   Future<void> _deleteEntry(String id) async {
-    await _diaryService.deleteEntry(id);
+    try {
+      await _diaryService.deleteEntry(id);
+    } on DiaryServiceException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Couldn't delete entry: ${e.message}"),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _allEntries = _diaryService.entries;

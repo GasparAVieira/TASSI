@@ -380,10 +380,39 @@ class DiaryService extends ChangeNotifier {
   // Local-only operations
   // ---------------------------------------------------------------------
 
-  /// Local-only delete — not wired to DELETE /api/v1/diary-entries/{id}
-  /// because the UI doesn't surface delete anywhere yet. When that lands,
-  /// swap this for a real network call.
+  /// DELETE /api/v1/diary-entries/{id} — removes the entry server-side
+  /// (cascades to media_items and comments via FK), then evicts from
+  /// the local cache. Throws DiaryServiceException on failure so the
+  /// caller can show a message and decide whether to leave the row
+  /// visible.
   Future<void> deleteEntry(String id) async {
+    final uri = Uri.parse(ApiClient.url('/api/v1/diary-entries/$id'));
+
+    http.Response resp;
+    try {
+      resp = await _client
+          .delete(uri, headers: _authHeaders())
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      throw DiaryServiceException(
+        'The server took too long to respond. Try again on a stronger connection.',
+      );
+    } on SocketException {
+      throw DiaryServiceException(
+        'Could not reach the server. Check your connection.',
+      );
+    }
+
+    // 204 No Content on success. 404 means already gone — treat as
+    // success since the user's intent (no longer there) is satisfied.
+    if (resp.statusCode != 204 && resp.statusCode != 404) {
+      throw DiaryServiceException(
+        _extractErrorMessage(resp.body) ??
+            'Failed to delete entry (HTTP ${resp.statusCode}).',
+        statusCode: resp.statusCode,
+      );
+    }
+
     _entries.removeWhere((entry) => entry.id == id);
     notifyListeners();
   }
