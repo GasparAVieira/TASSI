@@ -199,41 +199,29 @@ def validate_diary_entry_payload(payload: DiaryEntryCreate) -> None:
 
 
 def _validate_entry_state(entry_type: str, body, media_items) -> None:
+    # Text entries must have a body and nothing else attached. Adding
+    # media would mean the entry's primary content is media, not text —
+    # in that case the client should pick an image/audio/video entry_type.
     if entry_type == "text":
         if not body:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Text entries require body",
             )
-
         if media_items:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Text entries cannot include media items",
             )
 
+    # Media entries must carry at least one attachment, but the kinds
+    # may be mixed: a "video" entry can include images alongside the
+    # video (e.g. a video diary with screenshots, a photo essay with
+    # one clip). entry_type is now a primary-kind hint for filtering,
+    # not a strict constraint on the items.
     if entry_type in {"audio", "image", "video"}:
         if not media_items:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Media entries require at least one media item",
             )
-
-        for media_item in media_items:
-            if entry_type == "audio" and media_item.media_type != "audio":
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Audio entry requires audio media",
-                )
-
-            if entry_type == "image" and media_item.media_type != "image":
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Image entry requires image media",
-                )
-
-            if entry_type == "video" and media_item.media_type != "video":
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Video entry requires video media",
-                )

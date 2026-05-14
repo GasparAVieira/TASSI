@@ -14,8 +14,10 @@ class DiaryEntryPage extends StatefulWidget {
 }
 
 class _DiaryEntryPageState extends State<DiaryEntryPage> {
+  late DiaryEntry _entry;
   late bool _isPrivate;
   bool _allExpanded = true;
+  bool _isRefreshing = false;
   final Map<String, bool> _sectionStates = {};
   final GlobalKey<AudioCarouselState> _audioCarouselKey = GlobalKey<AudioCarouselState>();
   final DiaryService _diaryService = DiaryService();
@@ -24,10 +26,11 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
   @override
   void initState() {
     super.initState();
-    _isPrivate = widget.entry.isPrivate;
-    _badgeCount = widget.entry.badgeCount ?? 0;
+    _entry = widget.entry;
+    _isPrivate = _entry.isPrivate;
+    _badgeCount = _entry.badgeCount ?? 0;
     _initSectionStates();
-    
+
     // Mark entry as read when viewed
     if (_badgeCount > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -35,16 +38,46 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
         setState(() {
           _badgeCount = 0;
         });
-        _diaryService.markAsRead(widget.entry.id);
+        _diaryService.markAsRead(_entry.id);
       });
+    }
+
+    // Kick off a refresh in the background so the chat shows the
+    // latest admin replies on every open. The cached entry stays
+    // visible meanwhile — no blocking spinner.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  Future<void> _refresh() async {
+    if (_isRefreshing) return;
+    if (mounted) setState(() => _isRefreshing = true);
+    try {
+      final fresh = await _diaryService.fetchEntry(_entry.id);
+      if (!mounted) return;
+      setState(() {
+        _entry = fresh;
+        // Server-side authoritative privacy/badge would override the
+        // local state — but right now the server doesn't track either,
+        // so we keep the local toggle for _isPrivate untouched.
+      });
+    } on DiaryServiceException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Couldn't refresh entry: ${e.message}"),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
     }
   }
 
   void _initSectionStates() {
-    if (widget.entry.content.isNotEmpty) _sectionStates['text'] = true;
-    if (widget.entry.audioCount > 0) _sectionStates['audio'] = true;
-    if (widget.entry.imageCount > 0) _sectionStates['image'] = true;
-    if (widget.entry.videoCount > 0) _sectionStates['video'] = true;
+    if (_entry.content.isNotEmpty) _sectionStates['text'] = true;
+    if (_entry.audioCount > 0) _sectionStates['audio'] = true;
+    if (_entry.imageCount > 0) _sectionStates['image'] = true;
+    if (_entry.videoCount > 0) _sectionStates['video'] = true;
     _sectionStates['chat'] = true;
   }
 
@@ -83,23 +116,23 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
     final SettingsService settings = SettingsService();
     
     final currentEntry = DiaryEntry(
-      id: widget.entry.id,
-      title: widget.entry.title,
-      date: widget.entry.date,
+      id: _entry.id,
+      title: _entry.title,
+      date: _entry.date,
       isPrivate: _isPrivate,
-      content: widget.entry.content,
-      hasText: widget.entry.hasText,
-      audioRecordings: widget.entry.audioRecordings,
-      images: widget.entry.images,
-      videos: widget.entry.videos,
-      messages: widget.entry.messages,
-      location: widget.entry.location,
+      content: _entry.content,
+      hasText: _entry.hasText,
+      audioRecordings: _entry.audioRecordings,
+      images: _entry.images,
+      videos: _entry.videos,
+      messages: _entry.messages,
+      location: _entry.location,
       badgeCount: _badgeCount,
     );
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.entry.title),
+        title: Text(_entry.title),
         elevation: 0,
         scrolledUnderElevation: 0,
         backgroundColor: theme.colorScheme.surface,
@@ -111,9 +144,9 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
             child: Row(
               children: [
                 _buildStatusChip(
-                  theme, 
-                  Icons.calendar_today, 
-                  widget.entry.date,
+                  theme,
+                  Icons.calendar_today,
+                  _entry.date,
                   color: theme.colorScheme.primaryContainer,
                   textColor: theme.colorScheme.onPrimaryContainer,
                 ),
@@ -165,25 +198,34 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
             ),
           ),
           const Divider(height: 1),
+          if (_isRefreshing)
+            LinearProgressIndicator(
+              minHeight: 2,
+              backgroundColor: theme.colorScheme.surface,
+              color: theme.colorScheme.primary,
+            ),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (widget.entry.content.isNotEmpty) ...[
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                  if (_entry.content.isNotEmpty) ...[
                     CollapsibleSection(
                       title: 'Text Content',
                       isExpanded: _sectionStates['text'],
                       onExpansionChanged: (expanded) => _updateSectionState('text', expanded),
-                      child: ScrollableTextSection(content: widget.entry.content),
+                      child: ScrollableTextSection(content: _entry.content),
                     ),
                     const Divider(height: 8),
                   ],
-                  
-                  if (widget.entry.audioCount > 0) ...[
+
+                  if (_entry.audioCount > 0) ...[
                     CollapsibleSection(
-                      title: 'Audio Recordings (${widget.entry.audioCount})',
+                      title: 'Audio Recordings (${_entry.audioCount})',
                       isExpanded: _sectionStates['audio'],
                       onExpansionChanged: (expanded) {
                         _updateSectionState('audio', expanded);
@@ -193,28 +235,28 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
                       },
                       child: AudioCarousel(
                         key: _audioCarouselKey,
-                        recordings: widget.entry.audioRecordings,
+                        recordings: _entry.audioRecordings,
                       ),
                     ),
                     const Divider(height: 8),
                   ],
 
-                  if (widget.entry.imageCount > 0) ...[
+                  if (_entry.imageCount > 0) ...[
                     CollapsibleSection(
-                      title: 'Images (${widget.entry.imageCount})',
+                      title: 'Images (${_entry.imageCount})',
                       isExpanded: _sectionStates['image'],
                       onExpansionChanged: (expanded) => _updateSectionState('image', expanded),
-                      child: ImageCarousel(images: widget.entry.images),
+                      child: ImageCarousel(images: _entry.images),
                     ),
                     const Divider(height: 8),
                   ],
 
-                  if (widget.entry.videoCount > 0) ...[
+                  if (_entry.videoCount > 0) ...[
                     CollapsibleSection(
-                      title: 'Videos (${widget.entry.videoCount})',
+                      title: 'Videos (${_entry.videoCount})',
                       isExpanded: _sectionStates['video'],
                       onExpansionChanged: (expanded) => _updateSectionState('video', expanded),
-                      child: VideoCarousel(videos: widget.entry.videos),
+                      child: VideoCarousel(videos: _entry.videos),
                     ),
                     const Divider(height: 8),
                   ],
@@ -233,7 +275,8 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
                       onTogglePrivacy: _togglePrivacy,
                     ),
                   ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -248,7 +291,7 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
                 Icon(Icons.location_on_outlined, size: 16, color: theme.colorScheme.onSurfaceVariant),
                 const SizedBox(width: 8),
                 Text(
-                  widget.entry.location,
+                  _entry.location,
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.bold,

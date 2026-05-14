@@ -94,6 +94,56 @@ class DiaryService extends ChangeNotifier {
     return List<DiaryEntry>.from(parsed);
   }
 
+  /// GET /api/v1/diary-entries/{id} — refresh a single entry (mainly so
+  /// the detail page can pull the latest comments without re-fetching
+  /// the whole list). Updates the entry in `_entries` if it's cached.
+  Future<DiaryEntry> fetchEntry(String id) async {
+    final uri = Uri.parse(ApiClient.url('/api/v1/diary-entries/$id'));
+
+    http.Response resp;
+    try {
+      resp = await _client
+          .get(uri, headers: _authHeaders())
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      throw DiaryServiceException(
+        'The server took too long to respond. Try again on a stronger connection.',
+      );
+    } on SocketException {
+      throw DiaryServiceException(
+        'Could not reach the server. Check your connection.',
+      );
+    }
+
+    if (resp.statusCode == 404) {
+      throw DiaryServiceException(
+        'This entry no longer exists.',
+        statusCode: 404,
+      );
+    }
+    if (resp.statusCode != 200) {
+      throw DiaryServiceException(
+        _extractErrorMessage(resp.body) ??
+            'Failed to load entry (HTTP ${resp.statusCode}).',
+        statusCode: resp.statusCode,
+      );
+    }
+
+    final entry = _diaryEntryFromJson(
+      jsonDecode(resp.body) as Map<String, dynamic>,
+    );
+
+    // Update the cache in place if we have this entry; otherwise leave
+    // the list untouched (caller can refresh the list separately if it
+    // cares).
+    final cachedIndex = _entries.indexWhere((e) => e.id == entry.id);
+    if (cachedIndex >= 0) {
+      _entries[cachedIndex] = entry;
+      notifyListeners();
+    }
+    return entry;
+  }
+
   /// POST /api/v1/diary-entries — persists a new entry and prepends it
   /// to the local cache. Throws DiaryServiceException if any attachment
   /// hasn't successfully uploaded yet (better to warn than silently drop).
@@ -343,15 +393,26 @@ class DiaryService extends ChangeNotifier {
   }
 
   static ChatMessage _chatMessageFromComment(Map<String, dynamic> c) {
-    // We don't get the author's display name back yet — just the id.
-    // For now: show 'Admin' if author_id is null (system reply) and the
-    // raw id otherwise. Replace once the backend joins author info.
-    final authorId = c['author_id'] as String?;
+    // The backend's DiaryEntryCommentResponse now includes a nested
+    // `author` summary with full_name + role. Prefer those over the raw
+    // author_id when present.
+    final author = (c['author'] as Map?)?.cast<String, dynamic>();
+    final fullName = (author?['full_name'] as String?)?.trim();
+    final role = (author?['role'] as String?)?.toLowerCase();
+
+    final sender = (fullName != null && fullName.isNotEmpty)
+        ? fullName
+        // Fallbacks: an author_id with no expanded summary, or a system
+        // reply with no author at all.
+        : ((c['author_id'] as String?) ?? 'Campus Admin');
+
+    final isAdmin = role == 'admin' || role == 'superadmin';
+
     return ChatMessage(
-      sender: authorId ?? 'Admin',
+      sender: sender,
       time: _formatDateTime((c['created_at'] as String?) ?? ''),
       content: (c['body'] as String?) ?? '',
-      isAdmin: authorId == null,
+      isAdmin: isAdmin,
     );
   }
 

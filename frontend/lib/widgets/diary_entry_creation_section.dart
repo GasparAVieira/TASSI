@@ -180,8 +180,14 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
     setState(() {
       _isAttachmentProcessing = true;
     });
-    final file = await _imagePicker.pickImage(source: ImageSource.gallery);
-    if (file == null) {
+
+    // Multi-select: lets users pick several photos in one go. Each
+    // picked file becomes its own Attachment and uploads independently
+    // via the existing single-file flow.
+    final List<XFile> files =
+        await _imagePicker.pickMultiImage(imageQuality: 90);
+
+    if (files.isEmpty) {
       if (!mounted) return;
       setState(() {
         _isAttachmentProcessing = _newEntryMedia.any(
@@ -191,31 +197,70 @@ class _DiaryEntryCreationSectionState extends State<DiaryEntryCreationSection> {
       return;
     }
 
-    final attachment = Attachment(
-      name: file.name,
-      type: 'Image',
-      createdAt: DateTime.now(),
-      sizeBytes: 0,
-      path: file.path,
-      isUploading: true,
-      uploadProgress: 0.0,
-    );
+    int duplicateCount = 0;
+    for (final file in files) {
+      final attachment = Attachment(
+        name: file.name,
+        type: 'Image',
+        createdAt: DateTime.now(),
+        sizeBytes: 0,
+        path: file.path,
+        isUploading: true,
+        uploadProgress: 0.0,
+      );
 
-    if (_tryAddAttachment(attachment)) {
-      final sizeBytes = await file.length();
-      if (!mounted) return;
+      // _tryAddAttachment surfaces a snackbar on duplicate. When
+      // bulk-adding we suppress that and show one summary instead, so
+      // the user doesn't get a wall of snackbars.
+      if (_hasDuplicateAttachment(attachment)) {
+        duplicateCount++;
+        continue;
+      }
+
+      // Skip the duplicate-snackbar branch by calling the underlying
+      // state mutation directly.
       setState(() {
-        attachment.sizeBytes = sizeBytes;
+        _newEntryMedia.add(attachment);
+        _attachmentPageIndex = _newEntryMedia.length - 1;
+        _isAttachmentProcessing = true;
       });
-      _uploadAttachment(attachment);
-    } else {
-      if (!mounted) return;
-      setState(() {
-        _isAttachmentProcessing = _newEntryMedia.any(
-          (item) => item.isUploading,
-        );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_attachmentPageController.hasClients) {
+          _attachmentPageController.jumpToPage(_attachmentPageIndex);
+        }
       });
+
+      // Kick off size measurement + upload. We don't await — uploads
+      // run in parallel, the UI tracks progress per Attachment.
+      // ignore: unawaited_futures
+      _hydrateAndUpload(file, attachment);
     }
+
+    if (duplicateCount > 0 && mounted) {
+      _showPermissionSnackbar(
+        duplicateCount == 1
+            ? 'One file was already attached and was skipped.'
+            : '$duplicateCount files were already attached and were skipped.',
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isAttachmentProcessing = _newEntryMedia.any(
+        (item) => item.isUploading,
+      );
+    });
+  }
+
+  /// Helper used by bulk-add paths: measure the file size, then start
+  /// the upload. Kept separate so the multi-select loop stays compact.
+  Future<void> _hydrateAndUpload(XFile file, Attachment attachment) async {
+    final sizeBytes = await file.length();
+    if (!mounted) return;
+    setState(() {
+      attachment.sizeBytes = sizeBytes;
+    });
+    _uploadAttachment(attachment);
   }
 
   Future<void> _captureVideo() async {
