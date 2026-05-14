@@ -967,6 +967,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Interest'**
   String get interest;
+
+  /// No description provided for @diaryLoginPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to access the Diary'**
+  String get diaryLoginPromptTitle;
+
+  /// No description provided for @diaryLoginPromptSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The diary is only available to registered users.'**
+  String get diaryLoginPromptSubtitle;
+
+  /// No description provided for @diaryAdvantagesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Why create an account?'**
+  String get diaryAdvantagesTitle;
+
+  /// No description provided for @diaryAdvantageCloudSync.
+  ///
+  /// In en, this message translates to:
+  /// **'Access your entries from any device'**
+  String get diaryAdvantageCloudSync;
+
+  /// No description provided for @diaryAdvantageSecure.
+  ///
+  /// In en, this message translates to:
+  /// **'Your entries are safely stored'**
+  String get diaryAdvantageSecure;
+
+  /// No description provided for @diaryAdvantagePrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which entries are shared'**
+  String get diaryAdvantagePrivate;
+
+  /// No description provided for @diaryAdvantageAttachments.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach text, audio, images, and videos'**
+  String get diaryAdvantageAttachments;
+
+  /// No description provided for @diaryLoginRedirectText.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in or create an account to start'**
+  String get diaryLoginRedirectText;
 }
 
 class _AppLocalizationsDelegate

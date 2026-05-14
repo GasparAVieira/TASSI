@@ -720,7 +720,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
             },
           ),
 
-          const DiaryPage(),
+          DiaryPage(
+            onLoginRedirect: () {
+              setState(() {
+                currentPageIndex = 3;
+                profileInitialTabIndex = 0;
+              });
+            },
+          ),
           ProfilePage(
             key: ValueKey('profile_tab_$profileInitialTabIndex'),
             initialTabIndex: profileInitialTabIndex,

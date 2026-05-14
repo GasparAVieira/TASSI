@@ -157,5 +157,13 @@
   "excitement": "Excitement",
   "stress": "Stress",
   "relaxation": "Relaxation",
-  "interest": "Interest"
+  "interest": "Interest",
+  "diaryLoginPromptTitle": "Sign in to access the Diary",
+  "diaryLoginPromptSubtitle": "The diary is only available to registered users.",
+  "diaryAdvantagesTitle": "Why create an account?",
+  "diaryAdvantageCloudSync": "Access your entries from any device",
+  "diaryAdvantageSecure": "Your entries are safely stored",
+  "diaryAdvantagePrivate": "Choose which entries are shared",
+  "diaryAdvantageAttachments": "Attach text, audio, images, and videos",
+  "diaryLoginRedirectText": "Sign in or create an account to start"
 }

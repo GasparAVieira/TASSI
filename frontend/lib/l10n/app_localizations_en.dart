@@ -470,4 +470,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get interest => 'Interest';
+
+  @override
+  String get diaryLoginPromptTitle => 'Sign in to access the Diary';
+
+  @override
+  String get diaryLoginPromptSubtitle =>
+      'The diary is only available to registered users.';
+
+  @override
+  String get diaryAdvantagesTitle => 'Why create an account?';
+
+  @override
+  String get diaryAdvantageCloudSync => 'Access your entries from any device';
+
+  @override
+  String get diaryAdvantageSecure => 'Your entries are safely stored';
+
+  @override
+  String get diaryAdvantagePrivate => 'Choose which entries are shared';
+
+  @override
+  String get diaryAdvantageAttachments =>
+      'Attach text, audio, images, and videos';
+
+  @override
+  String get diaryLoginRedirectText => 'Sign in or create an account to start';
 }

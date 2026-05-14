@@ -8,9 +8,12 @@ import '../models/diary_entry.dart';
 import 'diary_entry.dart';
 import '../widgets/diary_entry_widgets.dart';
 import '../widgets/diary_entry_creation_section.dart';
+import '../widgets/diary_login_prompt.dart';
 
 class DiaryPage extends StatefulWidget {
-  const DiaryPage({super.key});
+  final VoidCallback? onLoginRedirect;
+
+  const DiaryPage({super.key, this.onLoginRedirect});
 
   @override
   State<DiaryPage> createState() => _DiaryPageState();
@@ -62,6 +65,13 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
 
   Future<void> _loadDiaryEntries() async {
     if (!mounted) return;
+    if (!AuthService.instance.isLoggedIn) {
+      setState(() {
+        _isLoadingEntries = false;
+      });
+      return;
+    }
+
     setState(() {
       _isLoadingEntries = true;
     });
@@ -349,6 +359,7 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
     final cardWidth = MediaQuery.of(context).size.width - 20;
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
+    final isLoggedIn = AuthService.instance.isLoggedIn;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -460,650 +471,761 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
               topRight: Radius.circular(12),
             ),
           ),
-          child: Column(
-            children: [
-              // New Entry Card / Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-                child: AnimatedSize(
-                  duration: _settings.isAnimationsEnabled
-                      ? const Duration(milliseconds: 300)
-                      : Duration.zero,
-                  curve: Curves.easeInOut,
-                  child: Card(
-                    key: _newEntryKey,
-                    elevation: 0,
-                    margin: EdgeInsets.zero,
-                    color: _isCreatingEntry
-                        ? theme.colorScheme.secondaryContainer
-                        : theme.colorScheme.primaryContainer,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: InkWell(
-                      onTap: () => setState(() {
-                        if (_isCreatingEntry) {
-                          _tabController.index = 0;
-                          _selectedTabIndex = 0;
-                        }
-                        _isCreatingEntry = !_isCreatingEntry;
-                      }),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(5),
-                        child: Container(
-                          height: 48,
-                          alignment: Alignment.center,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _isCreatingEntry ? Icons.close : Icons.add,
-                                color: _isCreatingEntry
-                                    ? theme.colorScheme.onSecondaryContainer
-                                    : theme.colorScheme.onPrimaryContainer,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _isCreatingEntry ? 'Cancel Entry' : 'New Entry',
-                                style: theme.textTheme.labelLarge?.copyWith(
-                                  color: _isCreatingEntry
-                                      ? theme.colorScheme.onSecondaryContainer
-                                      : theme.colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.bold,
+          child: isLoggedIn
+              ? Column(
+                  children: [
+                    // New Entry Card / Header
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                      child: AnimatedSize(
+                        duration: _settings.isAnimationsEnabled
+                            ? const Duration(milliseconds: 300)
+                            : Duration.zero,
+                        curve: Curves.easeInOut,
+                        child: Card(
+                          key: _newEntryKey,
+                          elevation: 0,
+                          margin: EdgeInsets.zero,
+                          color: _isCreatingEntry
+                              ? theme.colorScheme.secondaryContainer
+                              : theme.colorScheme.primaryContainer,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: InkWell(
+                            onTap: () => setState(() {
+                              if (_isCreatingEntry) {
+                                _tabController.index = 0;
+                                _selectedTabIndex = 0;
+                              }
+                              _isCreatingEntry = !_isCreatingEntry;
+                            }),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(5),
+                              child: Container(
+                                height: 48,
+                                alignment: Alignment.center,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      _isCreatingEntry
+                                          ? Icons.close
+                                          : Icons.add,
+                                      color: _isCreatingEntry
+                                          ? theme.colorScheme
+                                              .onSecondaryContainer
+                                          : theme.colorScheme
+                                              .onPrimaryContainer,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _isCreatingEntry
+                                          ? 'Cancel Entry'
+                                          : 'New Entry',
+                                      style:
+                                          theme.textTheme.labelLarge?.copyWith(
+                                        color: _isCreatingEntry
+                                            ? theme.colorScheme
+                                                .onSecondaryContainer
+                                            : theme.colorScheme
+                                                .onPrimaryContainer,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ),
 
-              if (!_isCreatingEntry)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-                  child: Card(
-                    key: _tabBarKey,
-                    elevation: 0,
-                    margin: EdgeInsets.zero,
-                    color: theme.colorScheme.surface,
-                    clipBehavior: Clip.antiAlias,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: SizedBox(
-                        height: 56,
-                        child: _isCreatingEntry
-                            ? LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final hiddenWidth =
-                                      constraints.maxWidth * 0.4;
-                                  return Stack(
-                                    children: [
-                                      AbsorbPointer(
-                                        absorbing: _isAttachmentProcessing,
-                                        child: AnimatedOpacity(
-                                          opacity: _isAttachmentProcessing
-                                              ? 0.65
-                                              : 1.0,
-                                          duration: const Duration(
-                                            milliseconds: 200,
-                                          ),
-                                          child: TabBar(
-                                            controller: _tabController,
-                                            onTap: (index) {
-                                              if (_isAttachmentProcessing) {
-                                                return;
-                                              }
-                                              switch (index) {
-                                                case 2:
-                                                  _showMediaChoice('Audio');
-                                                  break;
-                                                case 3:
-                                                  _showMediaChoice('Image');
-                                                  break;
-                                                case 4:
-                                                  _showMediaChoice('Video');
-                                                  break;
-                                                default:
-                                                  break;
-                                              }
-                                            },
-                                            indicator: const BoxDecoration(
-                                              color: Colors.transparent,
-                                            ),
-                                            overlayColor:
-                                                WidgetStateProperty.all(
-                                                  Colors.transparent,
-                                                ),
-                                            splashBorderRadius:
-                                                BorderRadius.circular(8),
-                                            indicatorSize:
-                                                TabBarIndicatorSize.tab,
-                                            dividerColor: Colors.transparent,
-                                            labelColor: _isAttachmentProcessing
-                                                ? theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant
-                                                      .withValues(alpha: 0.5)
-                                                : theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                            unselectedLabelColor:
-                                                _isAttachmentProcessing
-                                                ? theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant
-                                                      .withValues(alpha: 0.45)
-                                                : theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                            labelPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 0,
-                                                ),
-                                            labelStyle: TextStyle(
-                                              fontSize: _settings.useLargeText
-                                                  ? 14
-                                                  : 12,
-                                              fontWeight: FontWeight.bold,
-                                              height: 1,
-                                            ),
-                                            unselectedLabelStyle: TextStyle(
-                                              fontSize: _settings.useLargeText
-                                                  ? 14
-                                                  : 12,
-                                              fontWeight: FontWeight.bold,
-                                              height: 1,
-                                            ),
-                                            tabs: const [
-                                              Tab(
-                                                icon: Icon(
-                                                  Icons.apps,
-                                                  size: 20,
-                                                ),
-                                                text: 'All',
-                                                iconMargin: EdgeInsets.only(
-                                                  bottom: 2,
-                                                ),
-                                              ),
-                                              Tab(
-                                                icon: Icon(
-                                                  Icons.notes,
-                                                  size: 20,
-                                                ),
-                                                text: 'Text',
-                                                iconMargin: EdgeInsets.only(
-                                                  bottom: 2,
-                                                ),
-                                              ),
-                                              Tab(
-                                                icon: Icon(Icons.mic, size: 20),
-                                                text: 'Audio',
-                                                iconMargin: EdgeInsets.only(
-                                                  bottom: 2,
-                                                ),
-                                              ),
-                                              Tab(
-                                                icon: Icon(
-                                                  Icons.image,
-                                                  size: 20,
-                                                ),
-                                                text: 'Image',
-                                                iconMargin: EdgeInsets.only(
-                                                  bottom: 2,
-                                                ),
-                                              ),
-                                              Tab(
-                                                icon: Icon(
-                                                  Icons.videocam,
-                                                  size: 20,
-                                                ),
-                                                text: 'Video',
-                                                iconMargin: EdgeInsets.only(
-                                                  bottom: 2,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        left: 0,
-                                        top: 0,
-                                        bottom: 0,
-                                        width: hiddenWidth,
-                                        child: Container(
-                                          color: theme.colorScheme.surface,
-                                          child: Row(
-                                            children: [
-                                              Expanded(
-                                                child: Center(
-                                                  child: Text(
-                                                    'Attach Media',
-                                                    style: theme
-                                                        .textTheme
-                                                        .labelSmall
-                                                        ?.copyWith(
-                                                          color: theme
-                                                              .colorScheme
-                                                              .onSurfaceVariant,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize:
-                                                              _settings
-                                                                  .useLargeText
-                                                              ? 14
-                                                              : 12,
-                                                          height: 1,
-                                                        ),
-                                                  ),
-                                                ),
-                                              ),
-                                              VerticalDivider(
-                                                width: 1,
-                                                thickness: 1,
-                                                indent: 12,
-                                                endIndent: 12,
-                                                color: theme
-                                                    .colorScheme
-                                                    .outlineVariant,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              )
-                            : TabBar(
-                                controller: _tabController,
-                                indicator: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  color: _settings.isHighContrast
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.primaryContainer
-                                            .withValues(alpha: 0.5),
-                                ),
-                                splashBorderRadius: BorderRadius.circular(8),
-                                indicatorSize: TabBarIndicatorSize.tab,
-                                dividerColor: Colors.transparent,
-                                labelColor: _settings.isHighContrast
-                                    ? theme.colorScheme.onPrimary
-                                    : theme.colorScheme.primary,
-                                unselectedLabelColor:
-                                    theme.colorScheme.onSurfaceVariant,
-                                labelPadding: const EdgeInsets.symmetric(
-                                  horizontal: 0,
-                                ),
-                                labelStyle: TextStyle(
-                                  fontSize: _settings.useLargeText ? 14 : 12,
-                                  fontWeight: FontWeight.bold,
-                                  height: 1,
-                                ),
-                                tabs: const [
-                                  Tab(
-                                    icon: Icon(Icons.apps, size: 20),
-                                    text: 'All',
-                                    iconMargin: EdgeInsets.only(bottom: 2),
-                                  ),
-                                  Tab(
-                                    icon: Icon(Icons.notes, size: 20),
-                                    text: 'Text',
-                                    iconMargin: EdgeInsets.only(bottom: 2),
-                                  ),
-                                  Tab(
-                                    icon: Icon(Icons.mic, size: 20),
-                                    text: 'Audio',
-                                    iconMargin: EdgeInsets.only(bottom: 2),
-                                  ),
-                                  Tab(
-                                    icon: Icon(Icons.image, size: 20),
-                                    text: 'Image',
-                                    iconMargin: EdgeInsets.only(bottom: 2),
-                                  ),
-                                  Tab(
-                                    icon: Icon(Icons.videocam, size: 20),
-                                    text: 'Video',
-                                    iconMargin: EdgeInsets.only(bottom: 2),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-
-              const SizedBox(height: 10),
-
-              if (_isCreatingEntry)
-                Expanded(
-                  child: DiaryEntryCreationSection(
-                    tabController: _tabController,
-                    settings: _settings,
-                    onCancel: () => setState(() {
-                      _isCreatingEntry = false;
-                      _tabController.index = 0;
-                      _selectedTabIndex = 0;
-                    }),
-                    onSave: (title, notes, isPrivate, attachments) async {
-                      try {
-                        await _diaryService.createEntry(
-                          title: title,
-                          content: notes,
-                          isPrivate: isPrivate,
-                          attachments: attachments,
-                        );
-                      } on DiaryServiceException catch (e) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("Couldn't save entry: ${e.message}"),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                        // Stay in the creation UI so the user can retry
-                        // or remove the failing attachment.
-                        return;
-                      }
-                      if (!mounted) return;
-                      setState(() {
-                        _isCreatingEntry = false;
-                        _tabController.index = 0;
-                        _selectedTabIndex = 0;
-                        _dateFilter = null;
-                        _privacyFilter = null;
-                      });
-                    },
-                  ),
-                )
-              else if (_isLoadingEntries)
-                Expanded(
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation(
-                        theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                Expanded(
-                  child: _filteredEntries.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No diary entries found.',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _loadDiaryEntries,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            itemCount: _filteredEntries.length,
-                            itemBuilder: (context, index) {
-                              final entry = _filteredEntries[index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: Card(
+                    if (!_isCreatingEntry)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                        child: Card(
+                          key: _tabBarKey,
                           elevation: 0,
                           margin: EdgeInsets.zero,
                           color: theme.colorScheme.surface,
+                          clipBehavior: Clip.antiAlias,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Flexible(
-                                                child: Text(
-                                                  entry.title,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    color: theme
-                                                        .colorScheme
-                                                        .onSurface,
-                                                    fontSize: 16,
-                                                    fontFamily: 'Roboto',
-                                                    fontWeight: FontWeight.w500,
-                                                    height: 1.2,
-                                                    letterSpacing: 0.15,
-                                                  ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            child: SizedBox(
+                              height: 56,
+                              child: _isCreatingEntry
+                                  ? LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        final hiddenWidth =
+                                            constraints.maxWidth * 0.4;
+                                        return Stack(
+                                          children: [
+                                            AbsorbPointer(
+                                              absorbing:
+                                                  _isAttachmentProcessing,
+                                              child: AnimatedOpacity(
+                                                opacity: _isAttachmentProcessing
+                                                    ? 0.65
+                                                    : 1.0,
+                                                duration: const Duration(
+                                                  milliseconds: 200,
                                                 ),
-                                              ),
-                                              if (entry.badgeCount != null &&
-                                                  entry.badgeCount! > 0) ...[
-                                                const SizedBox(width: 8),
-                                                PulsingBadge(
-                                                  label: entry.badgeCount! > 9 ? '9+' : entry.badgeCount.toString(),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        ),
-                                        MenuAnchor(
-                                          alignmentOffset: Offset(
-                                            -(cardWidth / 2) + 40,
-                                            0,
-                                          ),
-                                          style: MenuStyle(
-                                            padding: WidgetStateProperty.all(
-                                              EdgeInsets.zero,
-                                            ),
-                                            fixedSize: WidgetStateProperty.all(
-                                              Size(cardWidth / 2, 48),
-                                            ),
-                                            shape: WidgetStateProperty.all(
-                                              RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                side: _settings.isHighContrast
-                                                    ? BorderSide(
-                                                        color: theme
-                                                            .colorScheme
-                                                            .onSurface,
-                                                        width: 2,
-                                                      )
-                                                    : BorderSide.none,
-                                              ),
-                                            ),
-                                          ),
-                                          builder:
-                                              (context, controller, child) {
-                                                return IconButton(
-                                                  icon: const Icon(
-                                                    Icons.more_vert,
-                                                  ),
-                                                  onPressed: () {
-                                                    if (controller.isOpen) {
-                                                      controller.close();
-                                                    } else {
-                                                      controller.open();
+                                                child: TabBar(
+                                                  controller: _tabController,
+                                                  onTap: (index) {
+                                                    if (_isAttachmentProcessing) {
+                                                      return;
+                                                    }
+                                                    switch (index) {
+                                                      case 2:
+                                                        _showMediaChoice(
+                                                          'Audio',
+                                                        );
+                                                        break;
+                                                      case 3:
+                                                        _showMediaChoice(
+                                                          'Image',
+                                                        );
+                                                        break;
+                                                      case 4:
+                                                        _showMediaChoice(
+                                                          'Video',
+                                                        );
+                                                        break;
+                                                      default:
+                                                        break;
                                                     }
                                                   },
-                                                  visualDensity:
-                                                      VisualDensity.compact,
-                                                );
-                                              },
-                                          menuChildren: [
-                                            MenuItemButton(
-                                              onPressed: () =>
-                                                  _showDeleteConfirmation(
-                                                    entry,
+                                                  indicator:
+                                                      const BoxDecoration(
+                                                    color: Colors.transparent,
                                                   ),
-                                              style: ButtonStyle(
-                                                fixedSize:
-                                                    WidgetStateProperty.all(
-                                                      Size(cardWidth / 2, 48),
+                                                  overlayColor:
+                                                      WidgetStateProperty.all(
+                                                    Colors.transparent,
+                                                  ),
+                                                  splashBorderRadius:
+                                                      BorderRadius.circular(8),
+                                                  indicatorSize:
+                                                      TabBarIndicatorSize.tab,
+                                                  dividerColor:
+                                                      Colors.transparent,
+                                                  labelColor:
+                                                      _isAttachmentProcessing
+                                                          ? theme.colorScheme
+                                                              .onSurfaceVariant
+                                                              .withValues(
+                                                                alpha: 0.5,
+                                                              )
+                                                          : theme.colorScheme
+                                                              .onSurfaceVariant,
+                                                  unselectedLabelColor:
+                                                      _isAttachmentProcessing
+                                                          ? theme.colorScheme
+                                                              .onSurfaceVariant
+                                                              .withValues(
+                                                                alpha: 0.45,
+                                                              )
+                                                          : theme.colorScheme
+                                                              .onSurfaceVariant,
+                                                  labelPadding:
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                    horizontal: 0,
+                                                  ),
+                                                  labelStyle: TextStyle(
+                                                    fontSize:
+                                                        _settings.useLargeText
+                                                            ? 14
+                                                            : 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    height: 1,
+                                                  ),
+                                                  unselectedLabelStyle:
+                                                      TextStyle(
+                                                    fontSize:
+                                                        _settings.useLargeText
+                                                            ? 14
+                                                            : 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    height: 1,
+                                                  ),
+                                                  tabs: const [
+                                                    Tab(
+                                                      icon: Icon(
+                                                        Icons.apps,
+                                                        size: 20,
+                                                      ),
+                                                      text: 'All',
+                                                      iconMargin:
+                                                          EdgeInsets.only(
+                                                        bottom: 2,
+                                                      ),
                                                     ),
+                                                    Tab(
+                                                      icon: Icon(
+                                                        Icons.notes,
+                                                        size: 20,
+                                                      ),
+                                                      text: 'Text',
+                                                      iconMargin:
+                                                          EdgeInsets.only(
+                                                        bottom: 2,
+                                                      ),
+                                                    ),
+                                                    Tab(
+                                                      icon: Icon(
+                                                        Icons.mic,
+                                                        size: 20,
+                                                      ),
+                                                      text: 'Audio',
+                                                      iconMargin:
+                                                          EdgeInsets.only(
+                                                        bottom: 2,
+                                                      ),
+                                                    ),
+                                                    Tab(
+                                                      icon: Icon(
+                                                        Icons.image,
+                                                        size: 20,
+                                                      ),
+                                                      text: 'Image',
+                                                      iconMargin:
+                                                          EdgeInsets.only(
+                                                        bottom: 2,
+                                                      ),
+                                                    ),
+                                                    Tab(
+                                                      icon: Icon(
+                                                        Icons.videocam,
+                                                        size: 20,
+                                                      ),
+                                                      text: 'Video',
+                                                      iconMargin:
+                                                          EdgeInsets.only(
+                                                        bottom: 2,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
-                                              leadingIcon: Icon(
-                                                Icons.delete_outline,
-                                                color: theme.colorScheme.error,
+                                            ),
+                                            Positioned(
+                                              left: 0,
+                                              top: 0,
+                                              bottom: 0,
+                                              width: hiddenWidth,
+                                              child: Container(
+                                                color: theme.colorScheme.surface,
+                                                child: Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Center(
+                                                        child: Text(
+                                                          'Attach Media',
+                                                          style: theme
+                                                              .textTheme
+                                                              .labelSmall
+                                                              ?.copyWith(
+                                                                color: theme
+                                                                    .colorScheme
+                                                                    .onSurfaceVariant,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize:
+                                                                    _settings
+                                                                        .useLargeText
+                                                                        ? 14
+                                                                        : 12,
+                                                                height: 1,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    VerticalDivider(
+                                                      width: 1,
+                                                      thickness: 1,
+                                                      indent: 12,
+                                                      endIndent: 12,
+                                                      color: theme.colorScheme
+                                                          .outlineVariant,
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
-                                              child: Text(
-                                                'Delete',
-                                                style: TextStyle(
-                                                  color:
-                                                      theme.colorScheme.error,
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    )
+                                  : TabBar(
+                                      controller: _tabController,
+                                      indicator: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        color: _settings.isHighContrast
+                                            ? theme.colorScheme.primary
+                                            : theme.colorScheme.primaryContainer
+                                                .withValues(alpha: 0.5),
+                                      ),
+                                      splashBorderRadius:
+                                          BorderRadius.circular(8),
+                                      indicatorSize: TabBarIndicatorSize.tab,
+                                      dividerColor: Colors.transparent,
+                                      labelColor: _settings.isHighContrast
+                                          ? theme.colorScheme.onPrimary
+                                          : theme.colorScheme.primary,
+                                      unselectedLabelColor:
+                                          theme.colorScheme.onSurfaceVariant,
+                                      labelPadding: const EdgeInsets.symmetric(
+                                        horizontal: 0,
+                                      ),
+                                      labelStyle: TextStyle(
+                                        fontSize:
+                                            _settings.useLargeText ? 14 : 12,
+                                        fontWeight: FontWeight.bold,
+                                        height: 1,
+                                      ),
+                                      tabs: const [
+                                        Tab(
+                                          icon: Icon(Icons.apps, size: 20),
+                                          text: 'All',
+                                          iconMargin:
+                                              EdgeInsets.only(bottom: 2),
+                                        ),
+                                        Tab(
+                                          icon: Icon(Icons.notes, size: 20),
+                                          text: 'Text',
+                                          iconMargin:
+                                              EdgeInsets.only(bottom: 2),
+                                        ),
+                                        Tab(
+                                          icon: Icon(Icons.mic, size: 20),
+                                          text: 'Audio',
+                                          iconMargin:
+                                              EdgeInsets.only(bottom: 2),
+                                        ),
+                                        Tab(
+                                          icon: Icon(Icons.image, size: 20),
+                                          text: 'Image',
+                                          iconMargin:
+                                              EdgeInsets.only(bottom: 2),
+                                        ),
+                                        Tab(
+                                          icon: Icon(Icons.videocam, size: 20),
+                                          text: 'Video',
+                                          iconMargin:
+                                              EdgeInsets.only(bottom: 2),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: 10),
+
+                    if (_isCreatingEntry)
+                      Expanded(
+                        child: DiaryEntryCreationSection(
+                          tabController: _tabController,
+                          settings: _settings,
+                          onCancel: () => setState(() {
+                            _isCreatingEntry = false;
+                            _tabController.index = 0;
+                            _selectedTabIndex = 0;
+                          }),
+                          onSave: (title, notes, isPrivate, attachments) async {
+                            try {
+                              await _diaryService.createEntry(
+                                title: title,
+                                content: notes,
+                                isPrivate: isPrivate,
+                                attachments: attachments,
+                              );
+                            } on DiaryServiceException catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content:
+                                      Text("Couldn't save entry: ${e.message}"),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              // Stay in the creation UI so the user can retry
+                              // or remove the failing attachment.
+                              return;
+                            }
+                            if (!mounted) return;
+                            setState(() {
+                              _isCreatingEntry = false;
+                              _tabController.index = 0;
+                              _selectedTabIndex = 0;
+                              _dateFilter = null;
+                              _privacyFilter = null;
+                            });
+                          },
+                        ),
+                      )
+                    else if (_isLoadingEntries)
+                      Expanded(
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation(
+                              theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: _filteredEntries.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'No diary entries found.',
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              )
+                            : RefreshIndicator(
+                                onRefresh: _loadDiaryEntries,
+                                child: ListView.builder(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                  ),
+                                  itemCount: _filteredEntries.length,
+                                  itemBuilder: (context, index) {
+                                    final entry = _filteredEntries[index];
+                                    return Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 10),
+                                      child: Card(
+                                        elevation: 0,
+                                        margin: EdgeInsets.zero,
+                                        color: theme.colorScheme.surface,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding: const EdgeInsets.fromLTRB(
+                                                  16, 8, 8, 8),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      Expanded(
+                                                        child: Row(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            Flexible(
+                                                              child: Text(
+                                                                entry.title,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                                style:
+                                                                    TextStyle(
+                                                                  color: theme
+                                                                      .colorScheme
+                                                                      .onSurface,
+                                                                  fontSize: 16,
+                                                                  fontFamily:
+                                                                      'Roboto',
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w500,
+                                                                  height: 1.2,
+                                                                  letterSpacing:
+                                                                      0.15,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            if (entry.badgeCount !=
+                                                                    null &&
+                                                                entry.badgeCount! >
+                                                                    0) ...[
+                                                              const SizedBox(
+                                                                  width: 8),
+                                                              PulsingBadge(
+                                                                label: entry.badgeCount! >
+                                                                        9
+                                                                    ? '9+'
+                                                                    : entry
+                                                                        .badgeCount
+                                                                        .toString(),
+                                                              ),
+                                                            ],
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      MenuAnchor(
+                                                        alignmentOffset: Offset(
+                                                          -(cardWidth / 2) + 40,
+                                                          0,
+                                                        ),
+                                                        style: MenuStyle(
+                                                          padding: WidgetStateProperty
+                                                              .all(
+                                                            EdgeInsets.zero,
+                                                          ),
+                                                          fixedSize: WidgetStateProperty
+                                                              .all(
+                                                            Size(
+                                                                cardWidth / 2,
+                                                                48),
+                                                          ),
+                                                          shape: WidgetStateProperty
+                                                              .all(
+                                                            RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          8),
+                                                              side: _settings
+                                                                      .isHighContrast
+                                                                  ? BorderSide(
+                                                                      color: theme
+                                                                          .colorScheme
+                                                                          .onSurface,
+                                                                      width: 2,
+                                                                    )
+                                                                  : BorderSide
+                                                                      .none,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        builder: (context,
+                                                            controller, child) {
+                                                          return IconButton(
+                                                            icon: const Icon(
+                                                              Icons.more_vert,
+                                                            ),
+                                                            onPressed: () {
+                                                              if (controller
+                                                                  .isOpen) {
+                                                                controller
+                                                                    .close();
+                                                              } else {
+                                                                controller
+                                                                    .open();
+                                                              }
+                                                            },
+                                                            visualDensity:
+                                                                VisualDensity
+                                                                    .compact,
+                                                          );
+                                                        },
+                                                        menuChildren: [
+                                                          MenuItemButton(
+                                                            onPressed: () =>
+                                                                _showDeleteConfirmation(
+                                                              entry,
+                                                            ),
+                                                            style: ButtonStyle(
+                                                              fixedSize: WidgetStateProperty
+                                                                  .all(
+                                                                Size(
+                                                                    cardWidth /
+                                                                        2,
+                                                                    48),
+                                                              ),
+                                                            ),
+                                                            leadingIcon: Icon(
+                                                              Icons
+                                                                  .delete_outline,
+                                                              color: theme
+                                                                  .colorScheme
+                                                                  .error,
+                                                            ),
+                                                            child: Text(
+                                                              'Delete',
+                                                              style: TextStyle(
+                                                                color: theme
+                                                                    .colorScheme
+                                                                    .error,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      _buildEntryChip(
+                                                        theme,
+                                                        entry.date,
+                                                        onTap: () {
+                                                          setState(() {
+                                                            if (_dateFilter ==
+                                                                entry.date) {
+                                                              _dateFilter =
+                                                                  null;
+                                                            } else {
+                                                              _dateFilter =
+                                                                  entry.date;
+                                                            }
+                                                          });
+                                                        },
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      _buildEntryChip(
+                                                        theme,
+                                                        entry.isPrivate
+                                                            ? 'Private'
+                                                            : 'Public',
+                                                        onTap: () {
+                                                          setState(() {
+                                                            final val = entry
+                                                                    .isPrivate
+                                                                ? 'Private'
+                                                                : 'Public';
+                                                            if (_privacyFilter ==
+                                                                val) {
+                                                              _privacyFilter =
+                                                                  null;
+                                                            } else {
+                                                              _privacyFilter =
+                                                                  val;
+                                                            }
+                                                          });
+                                                        },
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 2,
+                                              ),
+                                              child: Divider(
+                                                height: 1,
+                                                thickness: 1,
+                                                color: theme
+                                                    .colorScheme.outlineVariant
+                                                    .withValues(alpha: 0.5),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                16,
+                                                12,
+                                                16,
+                                                16,
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  if (entry.content
+                                                      .trim()
+                                                      .isNotEmpty) ...[
+                                                    Text(
+                                                      entry.content,
+                                                      maxLines: 2,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: theme
+                                                          .textTheme.bodyMedium
+                                                          ?.copyWith(
+                                                        color: theme
+                                                            .colorScheme
+                                                            .onSurfaceVariant,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 12),
+                                                  ],
+                                                  IntrinsicHeight(
+                                                    child: Row(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .stretch,
+                                                      children:
+                                                          _buildMediaChipsList(
+                                                        theme,
+                                                        text: entry.hasText,
+                                                        audioCount:
+                                                            entry.audioCount,
+                                                        imageCount:
+                                                            entry.imageCount,
+                                                        videoCount:
+                                                            entry.videoCount,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                16,
+                                                0,
+                                                16,
+                                                16,
+                                              ),
+                                              child: SizedBox(
+                                                width: double.infinity,
+                                                child: FilledButton(
+                                                  onPressed: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            DiaryEntryPage(
+                                                                entry: entry),
+                                                      ),
+                                                    );
+                                                  },
+                                                  style: FilledButton.styleFrom(
+                                                    shape:
+                                                        RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
+                                                    ),
+                                                  ),
+                                                  child: const Text(
+                                                      'View Full Entry'),
                                                 ),
                                               ),
                                             ),
                                           ],
                                         ),
-                                      ],
-                                    ),
-                                    Row(
-                                      children: [
-                                        _buildEntryChip(
-                                          theme,
-                                          entry.date,
-                                          onTap: () {
-                                            setState(() {
-                                              if (_dateFilter == entry.date) {
-                                                _dateFilter = null;
-                                              } else {
-                                                _dateFilter = entry.date;
-                                              }
-                                            });
-                                          },
-                                        ),
-                                        const SizedBox(width: 8),
-                                        _buildEntryChip(
-                                          theme,
-                                          entry.isPrivate
-                                              ? 'Private'
-                                              : 'Public',
-                                          onTap: () {
-                                            setState(() {
-                                              final val = entry.isPrivate
-                                                  ? 'Private'
-                                                  : 'Public';
-                                              if (_privacyFilter == val) {
-                                                _privacyFilter = null;
-                                              } else {
-                                                _privacyFilter = val;
-                                              }
-                                            });
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 2,
-                                ),
-                                child: Divider(
-                                  height: 1,
-                                  thickness: 1,
-                                  color: theme.colorScheme.outlineVariant
-                                      .withValues(alpha: 0.5),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  16,
-                                  12,
-                                  16,
-                                  16,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (entry.content.trim().isNotEmpty) ...[
-                                      Text(
-                                        entry.content,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                              color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                            ),
                                       ),
-                                      const SizedBox(height: 12),
-                                    ],
-                                    IntrinsicHeight(
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: _buildMediaChipsList(
-                                          theme,
-                                          text: entry.hasText,
-                                          audioCount: entry.audioCount,
-                                          imageCount: entry.imageCount,
-                                          videoCount: entry.videoCount,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                    );
+                                  },
                                 ),
                               ),
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  16,
-                                  0,
-                                  16,
-                                  16,
-                                ),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              DiaryEntryPage(entry: entry),
-                                        ),
-                                      );
-                                    },
-                                    style: FilledButton.styleFrom(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child: const Text('View Full Entry'),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                      ),
+                  ],
+                )
+              : DiaryLoginPrompt(
+                  onLoginRedirect: widget.onLoginRedirect ?? () {},
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );

@@ -475,4 +475,33 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get interest => 'Interesse';
+
+  @override
+  String get diaryLoginPromptTitle => 'Inicie sessão para aceder ao Diário';
+
+  @override
+  String get diaryLoginPromptSubtitle =>
+      'O diário está apenas disponível para utilizadores registados.';
+
+  @override
+  String get diaryAdvantagesTitle => 'Porquê criar uma conta?';
+
+  @override
+  String get diaryAdvantageCloudSync =>
+      'Aceda às suas entradas em qualquer dispositivo';
+
+  @override
+  String get diaryAdvantageSecure =>
+      'As suas entradas são guardadas com segurança';
+
+  @override
+  String get diaryAdvantagePrivate => 'Escolha quais entradas são partilhadas';
+
+  @override
+  String get diaryAdvantageAttachments =>
+      'Anexe texto, áudio, imagens e vídeos';
+
+  @override
+  String get diaryLoginRedirectText =>
+      'Inicie sessão ou crie uma conta para começar';
 }
