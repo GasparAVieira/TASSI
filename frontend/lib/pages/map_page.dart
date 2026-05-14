@@ -48,7 +48,7 @@ class _MapPageState extends State<MapPage> {
   StreamSubscription? _navigationSub;
 
   String selectedFloor = 'F1';
-  final List<String> floors = ['F3', 'F2', 'F1'];
+  final List<String> floors = ['F4', 'F3', 'F2', 'F1'];
   bool isLegendVisible = false;
   bool isSidebarExpanded = true;
 
