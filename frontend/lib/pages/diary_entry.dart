@@ -31,6 +31,11 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
     _badgeCount = _entry.badgeCount ?? 0;
     _initSectionStates();
 
+    // React to DiaryService cache changes — fires after fetchEntry,
+    // postComment, etc. Lets the chat list update without us having
+    // to re-fetch explicitly.
+    _diaryService.addListener(_onDiaryServiceChanged);
+
     // Mark entry as read when viewed
     if (_badgeCount > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -46,6 +51,23 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
     // latest admin replies on every open. The cached entry stays
     // visible meanwhile — no blocking spinner.
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  @override
+  void dispose() {
+    _diaryService.removeListener(_onDiaryServiceChanged);
+    super.dispose();
+  }
+
+  void _onDiaryServiceChanged() {
+    if (!mounted) return;
+    final fresh = _diaryService.entries
+        .where((e) => e.id == _entry.id)
+        .cast<DiaryEntry?>()
+        .firstWhere((e) => true, orElse: () => null);
+    if (fresh != null && !identical(fresh, _entry)) {
+      setState(() => _entry = fresh);
+    }
   }
 
   Future<void> _refresh() async {

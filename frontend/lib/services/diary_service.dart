@@ -227,6 +227,84 @@ class DiaryService extends ChangeNotifier {
     return entry;
   }
 
+  /// POST /api/v1/diary-entries/{entry_id}/comments — the user (entry
+  /// owner) posts a reply in their own thread. Returns the new ChatMessage
+  /// and appends it to the cached entry's messages so the UI updates
+  /// without a refetch.
+  Future<ChatMessage> postComment({
+    required String entryId,
+    required String body,
+  }) async {
+    final trimmed = body.trim();
+    if (trimmed.isEmpty) {
+      throw DiaryServiceException('Comment cannot be empty.');
+    }
+
+    final uri = Uri.parse(
+      ApiClient.url('/api/v1/diary-entries/$entryId/comments'),
+    );
+
+    http.Response resp;
+    try {
+      resp = await _client
+          .post(
+            uri,
+            headers: _authHeaders(),
+            body: jsonEncode({'body': trimmed}),
+          )
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      throw DiaryServiceException(
+        'The server took too long to respond. Try again on a stronger connection.',
+      );
+    } on SocketException {
+      throw DiaryServiceException(
+        'Could not reach the server. Check your connection.',
+      );
+    }
+
+    if (resp.statusCode == 404) {
+      throw DiaryServiceException(
+        'This entry no longer exists.',
+        statusCode: 404,
+      );
+    }
+    if (resp.statusCode != 201) {
+      throw DiaryServiceException(
+        _extractErrorMessage(resp.body) ??
+            'Failed to send message (HTTP ${resp.statusCode}).',
+        statusCode: resp.statusCode,
+      );
+    }
+
+    final newMessage = _chatMessageFromComment(
+      jsonDecode(resp.body) as Map<String, dynamic>,
+    );
+
+    // Patch the cached entry so the detail page (and any other listener)
+    // sees the new message without a server round-trip.
+    final idx = _entries.indexWhere((e) => e.id == entryId);
+    if (idx >= 0) {
+      final old = _entries[idx];
+      _entries[idx] = DiaryEntry(
+        id: old.id,
+        title: old.title,
+        date: old.date,
+        isPrivate: old.isPrivate,
+        content: old.content,
+        hasText: old.hasText,
+        audioRecordings: old.audioRecordings,
+        images: old.images,
+        videos: old.videos,
+        messages: [...old.messages, newMessage],
+        location: old.location,
+        badgeCount: old.badgeCount,
+      );
+      notifyListeners();
+    }
+    return newMessage;
+  }
+
   // ---------------------------------------------------------------------
   // Local-only operations
   // ---------------------------------------------------------------------

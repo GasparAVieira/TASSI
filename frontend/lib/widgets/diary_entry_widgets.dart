@@ -7,6 +7,7 @@ import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import '../models/diary_entry.dart';
+import '../services/diary_service.dart';
 import '../services/settings_service.dart';
 
 /// True for any path that we should treat as a remote resource (R2 public
@@ -1138,33 +1139,122 @@ Widget buildChatSection(
               ),
       ),
       const SizedBox(height: 12),
-      Row(
-        children: [
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Type a message...',
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          _ChatSendButton(settings: settings),
-        ],
-      ),
+      _ChatComposer(entryId: entry.id, settings: settings),
     ],
   );
 }
 
+class _ChatComposer extends StatefulWidget {
+  final String entryId;
+  final SettingsService settings;
+  const _ChatComposer({required this.entryId, required this.settings});
+
+  @override
+  State<_ChatComposer> createState() => _ChatComposerState();
+}
+
+class _ChatComposerState extends State<_ChatComposer> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  bool _isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Rebuild on text change so the send button can enable/disable as
+    // the user types.
+    _controller.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onTextChanged);
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  bool get _canSend => !_isSending && _controller.text.trim().isNotEmpty;
+
+  Future<void> _send() async {
+    final body = _controller.text.trim();
+    if (body.isEmpty || _isSending) return;
+    setState(() => _isSending = true);
+    try {
+      await DiaryService().postComment(entryId: widget.entryId, body: body);
+      if (!mounted) return;
+      _controller.clear();
+      // Keep focus so the user can type a follow-up without re-tapping
+      // the field.
+      _focusNode.requestFocus();
+    } on DiaryServiceException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Couldn't send: ${e.message}"),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            enabled: !_isSending,
+            minLines: 1,
+            maxLines: 4,
+            textInputAction: TextInputAction.send,
+            onSubmitted: (_) => _send(),
+            decoration: InputDecoration(
+              hintText: 'Type a message...',
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        _ChatSendButton(
+          settings: widget.settings,
+          isSending: _isSending,
+          enabled: _canSend,
+          onTap: _send,
+        ),
+      ],
+    );
+  }
+}
+
 class _ChatSendButton extends StatelessWidget {
   final SettingsService settings;
-  const _ChatSendButton({required this.settings});
+  final bool isSending;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _ChatSendButton({
+    required this.settings,
+    required this.isSending,
+    required this.enabled,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1184,17 +1274,37 @@ class _ChatSendButton extends StatelessWidget {
       iconColor = isDark ? theme.colorScheme.onPrimaryContainer : Colors.white;
     }
 
-    return Material(
-      color: buttonColor,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: () {},
+    // Dim the button when disabled so it reads as inert.
+    final effectiveButtonColor =
+        enabled ? buttonColor : buttonColor.withValues(alpha: 0.4);
+    final effectiveIconColor =
+        enabled ? iconColor : iconColor.withValues(alpha: 0.6);
+
+    return Semantics(
+      label: isSending ? 'Sending message' : 'Send message',
+      button: true,
+      enabled: enabled,
+      child: Material(
+        color: effectiveButtonColor,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 48,
-          height: 48,
-          alignment: Alignment.center,
-          child: Icon(Icons.send, color: iconColor),
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            child: isSending
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(effectiveIconColor),
+                    ),
+                  )
+                : Icon(Icons.send, color: effectiveIconColor),
+          ),
         ),
       ),
     );

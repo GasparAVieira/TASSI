@@ -18,6 +18,10 @@ from app.schemas.diary_entry import (
     DiaryEntryResponse,
     DiaryEntryUpdate,
 )
+from app.schemas.diary_entry_comment import (
+    DiaryEntryCommentCreate,
+    DiaryEntryCommentResponse,
+)
 
 router = APIRouter(prefix="/api/v1/diary-entries",tags=["Diary Entries"],)
 
@@ -192,6 +196,62 @@ def delete_diary_entry(
 
     db.delete(entry)
     db.commit()
+
+
+@router.post(
+    "/{entry_id}/comments",
+    response_model=DiaryEntryCommentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_entry_comment(
+    entry_id: UUID,
+    payload: DiaryEntryCommentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    User-facing comment creation.
+
+    Only the entry's owner (participant) can post here — this is the
+    "reply in your own thread" path that lets a diary author respond
+    to an admin reply. Admin-side comment creation continues to live
+    under /api/v1/admin/diary-entries/... and is gated by require_admin.
+    """
+    entry = (
+        db.query(DiaryEntry)
+        .filter(DiaryEntry.id == entry_id)
+        .first()
+    )
+    if entry is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Diary entry not found",
+        )
+    if entry.participant_id != current_user.id:
+        # Don't leak existence to non-owners; mirror the 404 we'd return
+        # for an unknown id.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Diary entry not found",
+        )
+
+    comment = DiaryEntryComment(
+        entry_id=entry.id,
+        author_id=current_user.id,
+        body=payload.body,
+    )
+    db.add(comment)
+    db.commit()
+
+    # Re-fetch with the author summary so the response matches the
+    # shape the Flutter mapper expects (author.full_name + author.role).
+    created = (
+        db.query(DiaryEntryComment)
+        .options(joinedload(DiaryEntryComment.author))
+        .filter(DiaryEntryComment.id == comment.id)
+        .first()
+    )
+    return created
 
 
 def validate_diary_entry_payload(payload: DiaryEntryCreate) -> None:
