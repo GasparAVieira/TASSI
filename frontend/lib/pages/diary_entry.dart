@@ -114,10 +114,37 @@ class _DiaryEntryPageState extends State<DiaryEntryPage> {
     });
   }
 
-  void _togglePrivacy() {
+  bool _privacySyncInFlight = false;
+
+  Future<void> _togglePrivacy() async {
+    if (_privacySyncInFlight) return;
+    final previous = _isPrivate;
+    final next = !previous;
+
+    // Optimistic flip — UI reflects the intended state immediately.
     setState(() {
-      _isPrivate = !_isPrivate;
+      _isPrivate = next;
+      _privacySyncInFlight = true;
     });
+
+    try {
+      await _diaryService.setEntryPrivacy(
+        entryId: _entry.id,
+        isPrivate: next,
+      );
+    } on DiaryServiceException catch (e) {
+      if (!mounted) return;
+      // Revert on failure so the UI stays consistent with the server.
+      setState(() => _isPrivate = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Couldn't update privacy: ${e.message}"),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _privacySyncInFlight = false);
+    }
   }
 
   void _toggleAllSections() {

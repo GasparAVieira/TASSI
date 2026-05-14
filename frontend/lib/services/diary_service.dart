@@ -227,6 +227,77 @@ class DiaryService extends ChangeNotifier {
     return entry;
   }
 
+  /// PUT /api/v1/diary-entries/{id} — flip the is_private flag.
+  ///
+  /// Privacy lives in context_notes (the backend has no dedicated column
+  /// for it since v3). The PUT handler replaces the JSONB column wholesale
+  /// via setattr, so we must send the FULL context_notes payload — title
+  /// included — to avoid clobbering other keys.
+  Future<DiaryEntry> setEntryPrivacy({
+    required String entryId,
+    required bool isPrivate,
+  }) async {
+    final cachedIndex = _entries.indexWhere((e) => e.id == entryId);
+    // We need the current title so we don't drop it on the round-trip.
+    // If the entry isn't cached, fetch it first.
+    String title = '';
+    if (cachedIndex >= 0) {
+      title = _entries[cachedIndex].title;
+    } else {
+      final fresh = await fetchEntry(entryId);
+      title = fresh.title;
+    }
+
+    final uri = Uri.parse(ApiClient.url('/api/v1/diary-entries/$entryId'));
+    final payload = <String, dynamic>{
+      'context_notes': <String, dynamic>{
+        if (title.trim().isNotEmpty) 'title': title.trim(),
+        'is_private': isPrivate,
+      },
+    };
+
+    http.Response resp;
+    try {
+      resp = await _client
+          .put(uri, headers: _authHeaders(), body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      throw DiaryServiceException(
+        'The server took too long to respond. Try again on a stronger connection.',
+      );
+    } on SocketException {
+      throw DiaryServiceException(
+        'Could not reach the server. Check your connection.',
+      );
+    }
+
+    if (resp.statusCode == 404) {
+      throw DiaryServiceException(
+        'This entry no longer exists.',
+        statusCode: 404,
+      );
+    }
+    if (resp.statusCode != 200) {
+      throw DiaryServiceException(
+        _extractErrorMessage(resp.body) ??
+            'Failed to update entry (HTTP ${resp.statusCode}).',
+        statusCode: resp.statusCode,
+      );
+    }
+
+    final updated = _diaryEntryFromJson(
+      jsonDecode(resp.body) as Map<String, dynamic>,
+    );
+
+    // Patch cache.
+    final idx = _entries.indexWhere((e) => e.id == entryId);
+    if (idx >= 0) {
+      _entries[idx] = updated;
+      notifyListeners();
+    }
+    return updated;
+  }
+
   /// POST /api/v1/diary-entries/{entry_id}/comments — the user (entry
   /// owner) posts a reply in their own thread. Returns the new ChatMessage
   /// and appends it to the cached entry's messages so the UI updates
