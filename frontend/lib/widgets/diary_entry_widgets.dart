@@ -4,9 +4,44 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:open_file/open_file.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import '../models/diary_entry.dart';
 import '../services/settings_service.dart';
+
+/// True for any path that we should treat as a remote resource (R2 public
+/// URL, basically). Local file paths fall through to the existing
+/// Image.file / OpenFile.open code paths.
+bool _isNetworkPath(String path) =>
+    path.startsWith('http://') || path.startsWith('https://');
+
+Future<void> _openMediaPath(BuildContext context, String path) async {
+  final messenger = ScaffoldMessenger.of(context);
+  if (_isNetworkPath(path)) {
+    final ok = await launchUrl(
+      Uri.parse(path),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!ok) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Unable to open file.')),
+      );
+    }
+    return;
+  }
+  if (!File(path).existsSync()) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Unable to open file.')),
+    );
+    return;
+  }
+  final result = await OpenFile.open(path);
+  if (result.type != ResultType.done) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Unable to open file.')),
+    );
+  }
+}
 
 class PulsingBadge extends StatefulWidget {
   final String label;
@@ -739,18 +774,8 @@ class _ImageCarouselState extends State<ImageCarousel> {
     super.dispose();
   }
 
-  Future<void> _openPath(BuildContext context, String path) async {
-    final messenger = ScaffoldMessenger.of(context);
-    if (!File(path).existsSync()) {
-      messenger.showSnackBar(SnackBar(content: Text('Unable to open file.')));
-      return;
-    }
-
-    final result = await OpenFile.open(path);
-    if (result.type != ResultType.done) {
-      messenger.showSnackBar(SnackBar(content: Text('Unable to open file.')));
-    }
-  }
+  Future<void> _openPath(BuildContext context, String path) =>
+      _openMediaPath(context, path);
 
   @override
   Widget build(BuildContext context) {
@@ -772,8 +797,9 @@ class _ImageCarouselState extends State<ImageCarousel> {
           separatorBuilder: (context, index) => const SizedBox(width: 8),
           itemBuilder: (context, index) {
             final path = widget.images[index];
-            final file = File(path);
-            final exists = file.existsSync();
+            final isNetwork = _isNetworkPath(path);
+            final file = isNetwork ? null : File(path);
+            final exists = isNetwork || (file?.existsSync() ?? false);
             return GestureDetector(
               onTap: exists ? () => _openPath(context, path) : null,
               child: Container(
@@ -784,23 +810,47 @@ class _ImageCarouselState extends State<ImageCarousel> {
                   border: Border.all(color: theme.colorScheme.outlineVariant),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: exists
-                    ? Image.file(
-                        file,
+                child: isNetwork
+                    ? Image.network(
+                        path,
                         fit: BoxFit.cover,
                         width: double.infinity,
                         height: double.infinity,
                         filterQuality: FilterQuality.high,
-                      )
-                    : Center(
-                        child: Text(
-                          path.split(RegExp(r'[\\/]')).last,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodySmall?.copyWith(
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return const Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stack) => Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
-                      ),
+                      )
+                    : exists
+                        ? Image.file(
+                            file!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            filterQuality: FilterQuality.high,
+                          )
+                        : Center(
+                            child: Text(
+                              path.split(RegExp(r'[\\/]')).last,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
               ),
             );
           },
@@ -847,6 +897,10 @@ class _VideoCarouselState extends State<VideoCarousel> {
   }
 
   Future<void> _generateThumbnail(int index, String path) async {
+    // Skip remote videos — VideoThumbnail.thumbnailFile won't fetch them,
+    // and we don't want to download the whole video on the list screen
+    // just to get a frame. The carousel will show a generic placeholder.
+    if (_isNetworkPath(path)) return;
     final file = File(path);
     if (!file.existsSync()) return;
 
@@ -873,18 +927,8 @@ class _VideoCarouselState extends State<VideoCarousel> {
     super.dispose();
   }
 
-  Future<void> _openPath(BuildContext context, String path) async {
-    final messenger = ScaffoldMessenger.of(context);
-    if (!File(path).existsSync()) {
-      messenger.showSnackBar(SnackBar(content: Text('Unable to open file.')));
-      return;
-    }
-
-    final result = await OpenFile.open(path);
-    if (result.type != ResultType.done) {
-      messenger.showSnackBar(SnackBar(content: Text('Unable to open file.')));
-    }
-  }
+  Future<void> _openPath(BuildContext context, String path) =>
+      _openMediaPath(context, path);
 
   @override
   Widget build(BuildContext context) {
@@ -899,8 +943,12 @@ class _VideoCarouselState extends State<VideoCarousel> {
             itemCount: widget.videos.length,
             itemBuilder: (context, index) {
               final path = widget.videos[index];
-              final file = File(path);
-              final exists = file.existsSync();
+              final isNetwork = _isNetworkPath(path);
+              final file = isNetwork ? null : File(path);
+              // Remote videos are always considered "openable" — we hand
+              // them off to launchUrl on tap rather than checking the
+              // filesystem.
+              final exists = isNetwork || (file?.existsSync() ?? false);
               final thumbPath = index < _thumbnailPaths.length
                   ? _thumbnailPaths[index]
                   : null;

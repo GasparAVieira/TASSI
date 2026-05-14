@@ -1,82 +1,102 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
-import '../models/diary_entry.dart';
+import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../models/diary_entry.dart';
+import 'api_client.dart';
+import 'auth_service.dart';
+
+/// Thrown by DiaryService. The `message` is safe to surface in a snackbar.
+class DiaryServiceException implements Exception {
+  final String message;
+  final int? statusCode;
+  DiaryServiceException(this.message, {this.statusCode});
+  @override
+  String toString() => message;
+}
+
+/// Backend-backed diary store. Acts as both a network client and a local
+/// cache: methods round-trip to the API and update `_entries` so the UI's
+/// `entries` getter stays consistent without a separate refresh step.
+///
+/// Scope is intentionally narrow: create + list. Delete and "mark read"
+/// remain local-only — the UI calls them on a single device session and
+/// nothing depends on their server state. Comments/messages are also
+/// out of scope for now (parsed from responses where present, but never
+/// posted from this client).
 class DiaryService extends ChangeNotifier {
   static final DiaryService _instance = DiaryService._internal();
   factory DiaryService() => _instance;
   DiaryService._internal();
 
-  final List<DiaryEntry> _entries = [
-    DiaryEntry(
-      id: '1',
-      title: 'Second Day on Campus',
-      date: 'Mar 18, 2026',
-      isPrivate: true,
-      content: 'Summary of today\'s lecture focused on quantum mechanics.',
-      hasText: true,
-      audioRecordings: [
-        AudioRecording(
-          duration: '01:00',
-          transcription:
-              'After attending the class today, I\'ve attached an audio note about the construction on the Northern Entrance. Currently, it\'s adding about 12 minutes to wheelchair-accessible routes.',
-        ),
-        AudioRecording(
-          duration: '01:00',
-          transcription: 'Short note about the library access.',
-        ),
-        AudioRecording(
-          duration: '01:00',
-          transcription: 'Reminder: Check Building C lift status.',
-        ),
-      ],
-      images: ['img1', 'img2', 'img3', 'img4', 'img5'],
-      videos: ['vid1', 'vid2'],
-      messages: [],
-      location: 'loc_001',
-    ),
-    DiaryEntry(
-      id: '2',
-      title: 'Got Lost on Campus',
-      date: 'Mar 19, 2026',
-      isPrivate: false,
-      content: 'I got lost today heading to the cafeteria.',
-      hasText: true,
-      audioRecordings: [
-        AudioRecording(
-          duration: '01:00',
-          transcription:
-              'I tried to go to the cafeteria right after leaving the last class of the morning. My colleagues told me that it\'s normally packed with people and that the best thing i could.',
-        ),
-      ],
-      images: [],
-      videos: [],
-      messages: [
-        ChatMessage(
-          sender: 'Campus Admin',
-          time: 'Mar 18, 2026 • 4:45 PM',
-          content:
-              'Thank you for sharing your experience. We\'re sorry to hear that our navigation feature didn\'t work so well for you.\n\nWe\'ll be in contact with you when possible. In the meantime, tell us more!',
-          isAdmin: true,
-        ),
-        ChatMessage(
-          sender: 'Username',
-          time: 'Mar 18, 2026 • 6:30 PM',
-          content:
-              'I tried so many times to search for the cafeteria, but had no luck. Is it even in the app? In the end I got lucky that someone showed me the way.',
-          isAdmin: false,
-        ),
-      ],
-      location: 'loc_002',
-      badgeCount: 1,
-    ),
-  ];
+  // ---------------------------------------------------------------------
+  // Test seams. Swap during tests; production uses the defaults.
+  // ---------------------------------------------------------------------
+  http.Client _client = http.Client();
+  // ignore: avoid_setters_without_getters
+  set client(http.Client c) => _client = c;
 
-  Future<List<DiaryEntry>> fetchEntries() async {
-    await Future.delayed(const Duration(milliseconds: 450));
-    return List<DiaryEntry>.from(_entries);
+  AuthService _authService = AuthService();
+  // ignore: avoid_setters_without_getters
+  set authService(AuthService s) => _authService = s;
+
+  final List<DiaryEntry> _entries = [];
+
+  List<DiaryEntry> get entries => List.unmodifiable(_entries);
+
+  // ---------------------------------------------------------------------
+  // Network surface
+  // ---------------------------------------------------------------------
+
+  /// GET /api/v1/diary-entries/me — replaces the local cache with the
+  /// server's view. Pagination params are exposed in case the UI wants
+  /// to scroll back; for now `limit=50` is plenty.
+  Future<List<DiaryEntry>> fetchEntries({int limit = 50, int offset = 0}) async {
+    final uri = Uri.parse(
+      ApiClient.url('/api/v1/diary-entries/me?limit=$limit&offset=$offset'),
+    );
+
+    http.Response resp;
+    try {
+      resp = await _client
+          .get(uri, headers: _authHeaders())
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      throw DiaryServiceException(
+        'The server took too long to respond. Try again on a stronger connection.',
+      );
+    } on SocketException {
+      throw DiaryServiceException(
+        'Could not reach the server. Check your connection.',
+      );
+    }
+
+    if (resp.statusCode != 200) {
+      throw DiaryServiceException(
+        _extractErrorMessage(resp.body) ??
+            'Failed to load entries (HTTP ${resp.statusCode}).',
+        statusCode: resp.statusCode,
+      );
+    }
+
+    final body = jsonDecode(resp.body) as Map<String, dynamic>;
+    final items = (body['items'] as List? ?? const [])
+        .cast<Map<String, dynamic>>();
+    final parsed = items.map(_diaryEntryFromJson).toList();
+
+    _entries
+      ..clear()
+      ..addAll(parsed);
+    notifyListeners();
+    return List<DiaryEntry>.from(parsed);
   }
 
+  /// POST /api/v1/diary-entries — persists a new entry and prepends it
+  /// to the local cache. Throws DiaryServiceException if any attachment
+  /// hasn't successfully uploaded yet (better to warn than silently drop).
   Future<DiaryEntry> createEntry({
     required String title,
     required String content,
@@ -84,76 +104,286 @@ class DiaryService extends ChangeNotifier {
     required List<Attachment> attachments,
     String location = '',
   }) async {
-    await Future.delayed(const Duration(milliseconds: 350));
-    final now = DateTime.now();
-    final monthNames = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final formattedDate = '${monthNames[now.month - 1]} ${now.day}, ${now.year}';
+    // Guard: any attachment without a public URL means an upload failed
+    // or is still in flight. Don't silently drop the user's work.
+    final unresolved = attachments
+        .where((a) => a.publicUrl == null || a.publicUrl!.isEmpty)
+        .toList();
+    if (unresolved.isNotEmpty) {
+      throw DiaryServiceException(
+        unresolved.length == 1
+            ? 'One attachment hasn\'t finished uploading. Retry or remove it before saving.'
+            : '${unresolved.length} attachments haven\'t finished uploading. Retry or remove them before saving.',
+      );
+    }
 
-    final entry = DiaryEntry(
-      id: now.millisecondsSinceEpoch.toString(),
-      title: title,
-      date: formattedDate,
-      isPrivate: isPrivate,
-      content: content,
-      hasText: content.trim().isNotEmpty,
-      audioRecordings: [],
-      images: attachments.where((attachment) => attachment.type == 'Image').map((attachment) => attachment.path ?? attachment.name).toList(),
-      videos: attachments.where((attachment) => attachment.type == 'Video').map((attachment) => attachment.path ?? attachment.name).toList(),
-      messages: [],
-      location: location,
+    final mediaItems = attachments
+        .map((a) => <String, dynamic>{
+              'media_type': a.type.toLowerCase(),
+              'url': a.publicUrl,
+            })
+        .toList();
+
+    final trimmedTitle = title.trim();
+    final trimmedBody = content.trim();
+    final payload = <String, dynamic>{
+      'entry_type': _inferEntryType(trimmedBody, attachments),
+      'recorded_at': DateTime.now().toUtc().toIso8601String(),
+      'context_notes': <String, dynamic>{
+        if (trimmedTitle.isNotEmpty) 'title': trimmedTitle,
+        'is_private': isPrivate,
+      },
+      'is_synced': true,
+      'media_items': mediaItems,
+    };
+    if (trimmedBody.isNotEmpty) payload['body'] = trimmedBody;
+    if (location.isNotEmpty) {
+      // location_id is a UUID on the backend. The current UI passes a
+      // free-form string (e.g. 'loc_001'), so we only forward values
+      // that look like UUIDs and drop the rest. A future iteration
+      // should let the user pick a real location.
+      if (_looksLikeUuid(location)) payload['location_id'] = location;
+    }
+
+    final uri = Uri.parse(ApiClient.url('/api/v1/diary-entries/'));
+    http.Response resp;
+    try {
+      resp = await _client
+          .post(uri, headers: _authHeaders(), body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 30));
+    } on TimeoutException {
+      throw DiaryServiceException(
+        'The server took too long to respond. Try again on a stronger connection.',
+      );
+    } on SocketException {
+      throw DiaryServiceException(
+        'Could not reach the server. Check your connection.',
+      );
+    }
+
+    if (resp.statusCode != 201) {
+      throw DiaryServiceException(
+        _extractErrorMessage(resp.body) ??
+            'Failed to create entry (HTTP ${resp.statusCode}).',
+        statusCode: resp.statusCode,
+      );
+    }
+
+    final entry = _diaryEntryFromJson(
+      jsonDecode(resp.body) as Map<String, dynamic>,
     );
-
     _entries.insert(0, entry);
     notifyListeners();
     return entry;
   }
 
+  // ---------------------------------------------------------------------
+  // Local-only operations
+  // ---------------------------------------------------------------------
+
+  /// Local-only delete — not wired to DELETE /api/v1/diary-entries/{id}
+  /// because the UI doesn't surface delete anywhere yet. When that lands,
+  /// swap this for a real network call.
   Future<void> deleteEntry(String id) async {
-    await Future.delayed(const Duration(milliseconds: 250));
     _entries.removeWhere((entry) => entry.id == id);
     notifyListeners();
   }
 
-  List<DiaryEntry> get entries => List.unmodifiable(_entries);
-
-  int get unreadMessageCount {
-    return _entries.fold<int>(0, (count, entry) => count + (entry.badgeCount ?? 0));
-  }
+  int get unreadMessageCount => _entries.fold<int>(
+        0,
+        (count, entry) => count + (entry.badgeCount ?? 0),
+      );
 
   bool get hasUnreadMessages => unreadMessageCount > 0;
 
+  /// Local-only — the server has no concept of "read state" on comments
+  /// yet. Survives the current session; a refetch resets it.
   void markAsRead(String id) {
-    int index = _entries.indexWhere((e) => e.id == id);
-    if (index != -1 && _entries[index].badgeCount != null && _entries[index].badgeCount! > 0) {
-      final oldEntry = _entries[index];
-      _entries[index] = DiaryEntry(
-        id: oldEntry.id,
-        title: oldEntry.title,
-        date: oldEntry.date,
-        isPrivate: oldEntry.isPrivate,
-        content: oldEntry.content,
-        hasText: oldEntry.hasText,
-        audioRecordings: oldEntry.audioRecordings,
-        images: oldEntry.images,
-        videos: oldEntry.videos,
-        messages: oldEntry.messages,
-        location: oldEntry.location,
-        badgeCount: 0,
-      );
-      notifyListeners();
+    final index = _entries.indexWhere((e) => e.id == id);
+    if (index == -1) return;
+    final old = _entries[index];
+    if (old.badgeCount == null || old.badgeCount! <= 0) return;
+    _entries[index] = DiaryEntry(
+      id: old.id,
+      title: old.title,
+      date: old.date,
+      isPrivate: old.isPrivate,
+      content: old.content,
+      hasText: old.hasText,
+      audioRecordings: old.audioRecordings,
+      images: old.images,
+      videos: old.videos,
+      messages: old.messages,
+      location: old.location,
+      badgeCount: 0,
+    );
+    notifyListeners();
+  }
+
+  // ---------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------
+
+  Map<String, String> _authHeaders() {
+    final token = _authService.token;
+    if (token == null || token.isEmpty) {
+      throw DiaryServiceException('You need to sign in first.');
     }
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
+
+  /// Smart inference per the agreed scope.
+  ///
+  /// The backend's validator forbids text entries from carrying media
+  /// (`text` + media_items -> 400 "Text entries cannot include media
+  /// items"). So whenever there's any attachment, the entry type has to
+  /// be a media type — body is allowed on media entries and shows up as
+  /// a caption.
+  ///
+  /// Priority when multiple media kinds are present: video > audio > image.
+  /// Fallback (no attachments at all) is 'text'.
+  static String _inferEntryType(String trimmedBody, List<Attachment> attachments) {
+    final types = attachments.map((a) => a.type.toLowerCase()).toSet();
+    if (types.contains('video')) return 'video';
+    if (types.contains('audio')) return 'audio';
+    if (types.contains('image')) return 'image';
+    return 'text';
+  }
+
+  /// Cheap UUID-shape check so we don't send '"loc_001"' as a UUID field.
+  static final RegExp _uuidRe = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+  static bool _looksLikeUuid(String s) => _uuidRe.hasMatch(s);
+
+  /// Pull a `detail` message out of a FastAPI error body.
+  static String? _extractErrorMessage(String body) {
+    if (body.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map && decoded['detail'] != null) {
+        final detail = decoded['detail'];
+        return detail is String ? detail : detail.toString();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // JSON → model mapping
+  //
+  // The Flutter DiaryEntry model is shaped around the UI's needs (split
+  // media lists, title/isPrivate as first-class fields, formatted date
+  // string). The backend's DiaryEntryResponse is shaped around the
+  // schema (unified media_items, context_notes JSONB, ISO timestamps).
+  // This is where the two views meet.
+  // ---------------------------------------------------------------------
+
+  static DiaryEntry _diaryEntryFromJson(Map<String, dynamic> json) {
+    final ctx =
+        ((json['context_notes'] as Map?)?.cast<String, dynamic>()) ??
+            const {};
+    final title = ((ctx['title'] as String?) ?? '').trim();
+    final isPrivate = (ctx['is_private'] as bool?) ?? false;
+
+    final body = (json['body'] as String?) ?? '';
+
+    final audio = <AudioRecording>[];
+    final images = <String>[];
+    final videos = <String>[];
+    final mediaItems = ((json['media_items'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>();
+    for (final m in mediaItems) {
+      final mt = ((m['media_type'] as String?) ?? '').toLowerCase();
+      final url = (m['url'] as String?) ?? '';
+      if (url.isEmpty) continue;
+      switch (mt) {
+        case 'audio':
+          audio.add(AudioRecording(
+            duration: _formatDuration(m['duration_sec']),
+            transcription: (m['transcription'] as String?) ?? '',
+          ));
+          break;
+        case 'image':
+          images.add(url);
+          break;
+        case 'video':
+          videos.add(url);
+          break;
+      }
+    }
+
+    // Comments are out of scope for write, but we parse them on read so
+    // any pre-existing replies show up in the UI.
+    final comments = ((json['comments'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>();
+    final messages = comments.map(_chatMessageFromComment).toList();
+
+    final recordedAt =
+        (json['recorded_at'] as String?) ?? (json['created_at'] as String? ?? '');
+
+    return DiaryEntry(
+      id: json['id'] as String,
+      title: title,
+      date: _formatDate(recordedAt),
+      isPrivate: isPrivate,
+      content: body,
+      hasText: body.trim().isNotEmpty,
+      audioRecordings: audio,
+      images: images,
+      videos: videos,
+      messages: messages,
+      location: (json['location_id'] as String?) ?? '',
+      // Unread badge: not tracked server-side yet — start at 0.
+      badgeCount: 0,
+    );
+  }
+
+  static ChatMessage _chatMessageFromComment(Map<String, dynamic> c) {
+    // We don't get the author's display name back yet — just the id.
+    // For now: show 'Admin' if author_id is null (system reply) and the
+    // raw id otherwise. Replace once the backend joins author info.
+    final authorId = c['author_id'] as String?;
+    return ChatMessage(
+      sender: authorId ?? 'Admin',
+      time: _formatDateTime((c['created_at'] as String?) ?? ''),
+      content: (c['body'] as String?) ?? '',
+      isAdmin: authorId == null,
+    );
+  }
+
+  static const _monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  static String _formatDate(String iso) {
+    final dt = DateTime.tryParse(iso);
+    if (dt == null) return '';
+    final local = dt.toLocal();
+    return '${_monthNames[local.month - 1]} ${local.day}, ${local.year}';
+  }
+
+  static String _formatDateTime(String iso) {
+    final dt = DateTime.tryParse(iso);
+    if (dt == null) return '';
+    final local = dt.toLocal();
+    final date = _formatDate(iso);
+    final hh = local.hour.toString().padLeft(2, '0');
+    final mm = local.minute.toString().padLeft(2, '0');
+    return '$date • $hh:$mm';
+  }
+
+  static String _formatDuration(dynamic sec) {
+    if (sec == null) return '00:00';
+    final s = sec is num
+        ? sec.toInt()
+        : int.tryParse(sec.toString().split('.').first) ?? 0;
+    final mm = (s ~/ 60).toString().padLeft(2, '0');
+    final ss = (s % 60).toString().padLeft(2, '0');
+    return '$mm:$ss';
   }
 }

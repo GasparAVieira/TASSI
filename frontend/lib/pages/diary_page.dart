@@ -72,6 +72,14 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
       setState(() {
         _allEntries = entries;
       });
+    } on DiaryServiceException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Couldn't load diary: ${e.message}"),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -788,12 +796,25 @@ class _DiaryPageState extends State<DiaryPage> with TickerProviderStateMixin {
                       _selectedTabIndex = 0;
                     }),
                     onSave: (title, notes, isPrivate, attachments) async {
-                      await _diaryService.createEntry(
-                        title: title,
-                        content: notes,
-                        isPrivate: isPrivate,
-                        attachments: attachments,
-                      );
+                      try {
+                        await _diaryService.createEntry(
+                          title: title,
+                          content: notes,
+                          isPrivate: isPrivate,
+                          attachments: attachments,
+                        );
+                      } on DiaryServiceException catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Couldn't save entry: ${e.message}"),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        // Stay in the creation UI so the user can retry
+                        // or remove the failing attachment.
+                        return;
+                      }
                       if (!mounted) return;
                       setState(() {
                         _isCreatingEntry = false;
