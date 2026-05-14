@@ -455,6 +455,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
   final DiaryService _diaryService = DiaryService();
   bool _wasLoggedIn = AuthService.instance.isLoggedIn;
 
+  Map<String, dynamic>? _activeRouteData;
+
   @override
   void initState() {
     super.initState();
@@ -707,8 +709,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Widget
           ],
         ),
         body: <Widget>[
-          MapPage(onOpenSettings: _openSettings),
-          const GoToPage(),
+          MapPage(onOpenSettings: _openSettings, activeRouteData: _activeRouteData,),
+
+          GoToPage(
+            onRouteSelected: (routeData) {
+              setState(() {
+                _activeRouteData = routeData;
+                currentPageIndex = 0;
+              });
+            },
+          ),
+
           const DiaryPage(),
           ProfilePage(
             key: ValueKey('profile_tab_$profileInitialTabIndex'),

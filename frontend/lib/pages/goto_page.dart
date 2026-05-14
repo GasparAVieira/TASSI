@@ -7,7 +7,9 @@ import '../widgets/error_popup.dart';
 import '../widgets/room_card.dart';
 
 class GoToPage extends StatefulWidget {
-  const GoToPage({super.key});
+  final Function(Map<String, dynamic> route)? onRouteSelected;
+
+  const GoToPage({super.key, this.onRouteSelected});
 
   @override
   State<GoToPage> createState() => _GoToPageState();
@@ -25,7 +27,7 @@ class _GoToPageState extends State<GoToPage> {
   List<Room> _allRooms = [];
   List<Room> _displayedRooms = [];
 
-  Room? _selectedOrigin;
+  //Room? _selectedOrigin;
   Map<String, dynamic>? _routeResult;
 
   @override
@@ -88,10 +90,8 @@ class _GoToPageState extends State<GoToPage> {
   }
 
   Future<void> _requestRoute(Room destination) async {
-    if (_selectedOrigin == null) {
-      _showMessage('Select your current room first.');
-      return;
-    }
+    // Hardcoded para testes ou deves obter a localização atual do beaconService
+    const String currentId = "c5968ebf-88d3-4e65-8e7e-2de89461a022";
 
     if (!mounted) return;
     setState(() {
@@ -101,8 +101,8 @@ class _GoToPageState extends State<GoToPage> {
 
     try {
       final result = await _navigationService.getRoute(
-        fromLocationId: _selectedOrigin!.id,
-        toLocationId: destination.id,
+        fromLocationId: currentId,
+        toLocationId: destination.locationId,
       );
 
       if (!mounted) return;
@@ -110,6 +110,10 @@ class _GoToPageState extends State<GoToPage> {
       setState(() {
         _routeResult = result;
       });
+
+      if (widget.onRouteSelected != null) {
+        widget.onRouteSelected!(result);
+      }
 
       _showRouteBottomSheet(result, destination);
     } catch (_) {
@@ -129,6 +133,7 @@ class _GoToPageState extends State<GoToPage> {
     Map<String, dynamic> route,
     Room destination,
   ) {
+    final theme = Theme.of(context);
     final steps = route['steps'] as List<dynamic>? ?? [];
 
     showModalBottomSheet(
@@ -161,17 +166,28 @@ class _GoToPageState extends State<GoToPage> {
                         final step = steps[index] as Map<String, dynamic>;
                         return Card(
                           child: ListTile(
+                            leading: const Icon(Icons.directions),
                             title: Text(
                               step['instruction']?.toString() ?? 'No instruction',
-                            ),
-                            subtitle: Text(
-                              'Direction: ${step['direction']} • Distance: ${step['distance']}',
                             ),
                           ),
                         );
                       },
                     ),
                   ),
+
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.navigation),
+                    label: const Text("Start Navigation", style: TextStyle(fontSize: 18)),
+                  ),
+                ),
               ],
             ),
           ),
@@ -325,15 +341,14 @@ class _GoToPageState extends State<GoToPage> {
                               isExpanded: _expandedIndex == index,
                               onToggle: () {
                                 setState(() {
-                                  if (_expandedIndex == index) {
-                                    _expandedIndex = null;
-                                  } else {
-                                    _expandedIndex = index;
-                                  }
+                                  _expandedIndex = (_expandedIndex == index) ? null : index;
                                 });
                               },
                               onFavoriteToggle: () {},
+                              onGoTo: () => _requestRoute(room),
                             ),
+
+
                           );
                         },
                       ),

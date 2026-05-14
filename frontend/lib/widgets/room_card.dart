@@ -8,6 +8,7 @@ class RoomCard extends StatelessWidget {
   final bool isExpanded;
   final VoidCallback onToggle;
   final VoidCallback onFavoriteToggle;
+  final VoidCallback onGoTo;
 
   const RoomCard({
     super.key,
@@ -15,6 +16,7 @@ class RoomCard extends StatelessWidget {
     required this.isExpanded,
     required this.onToggle,
     required this.onFavoriteToggle,
+    required this.onGoTo,
   });
 
    String? _thumbnailUrl() {
@@ -235,13 +237,15 @@ class RoomCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      /*
                       OutlinedButton(
                         onPressed: () {},
                         child: const Text('Open in Map'),
                       ),
                       const SizedBox(width: 8),
+                      */
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: onGoTo,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: theme.colorScheme.primary,
                           foregroundColor: theme.colorScheme.onPrimary,

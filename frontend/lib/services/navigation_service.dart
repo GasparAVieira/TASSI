@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import 'api_client.dart';
 import 'auth_service.dart';
+import 'accessibility_profile_service.dart';
 
 class NavigationService {
   static const Duration _timeout = Duration(seconds: 15);
@@ -13,17 +14,18 @@ class NavigationService {
     required String fromLocationId,
     required String toLocationId,
   }) async {
-    final auth = AuthService();
+    final accessibilityService = AccessibilityProfileService();
 
     try {
-      final response = await http.post(
-        Uri.parse(ApiClient.url('/api/v1/navigation/route')),
-        headers: auth.authHeaders(),
-        body: jsonEncode({
+      final uri = Uri.parse(ApiClient.url('/api/v1/navigation/route')).replace(
+        queryParameters: {
           'from_location_id': fromLocationId,
           'to_location_id': toLocationId,
-        }),
-      ).timeout(_timeout);
+          'accessibility_profile': accessibilityService.selectedProfile.serverValue,
+        },
+      );
+
+      final response = await http.get(uri);
 
       if (response.statusCode != 200) {
         throw Exception('Failed to get route: ${response.statusCode}');

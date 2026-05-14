@@ -2,20 +2,36 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../l10n/app_localizations.dart';
 import '../services/beacon_service.dart';
+import '../services/location_service.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class MapPage extends StatefulWidget {
   final VoidCallback? onOpenSettings;
+  final Map<String, dynamic>? activeRouteData;
 
-  const MapPage({super.key, this.onOpenSettings});
+  const MapPage({super.key, this.onOpenSettings, this.activeRouteData});
 
   @override
   State<MapPage> createState() => _MapPageState();
 }
 
 class _MapPageState extends State<MapPage> {
+  final LocationService locationService = LocationService();
+  List<dynamic> allLocations = [];
+
   final BeaconService beaconService = BeaconService(
     targetLocationId: "f6dbc5e3-f901-4799-ba06-c23deb71a4b5",
   );
+
+  final MapController _mapController = MapController();
+
+  final LatLngBounds isepBounds = LatLngBounds(
+    const LatLng(41.1770, -8.6098),
+    const LatLng(41.1800, -8.6051),
+  );
+
+  Set<String> activeRouteNodeIds = {};
 
   BeaconDevice? currentBeacon;
   bool scanning = false;
@@ -32,6 +48,13 @@ class _MapPageState extends State<MapPage> {
   bool isSidebarExpanded = true;
 
   late FixedExtentScrollController _floorScrollController;
+
+  void updateActiveRoute(Map<String, dynamic> routeData) {
+    setState(() {
+      final sequence = routeData['location_sequence'] as List<dynamic>? ?? [];
+      activeRouteNodeIds = sequence.map((id) => id.toString()).toSet();
+    });
+  }
 
   @override
   void initState() {
@@ -73,6 +96,8 @@ class _MapPageState extends State<MapPage> {
         currentInstruction = "TESTE FORÇADO";
       });
     });
+
+    _loadMapPoints();
   }
 
   Future<void> startScan() async {
@@ -83,6 +108,19 @@ class _MapPageState extends State<MapPage> {
   Future<void> stopScan() async {
     await beaconService.stopScanning();
     setState(() => scanning = false);
+  }
+
+  Future<void> _loadMapPoints() async {
+    try {
+      final locations = await locationService.fetchLocations();
+      if (mounted) {
+        setState(() {
+          allLocations = locations;
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao carregar localizações: $e');
+    }
   }
 
   @override
@@ -105,6 +143,22 @@ class _MapPageState extends State<MapPage> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
+    final sequence = widget.activeRouteData?['location_sequence'] as List<dynamic>? ?? [];
+    List<LatLng> routePoints = [];
+
+    for (var nodeId in sequence) {
+      final location = allLocations.firstWhere(
+            (loc) => loc['id'].toString() == nodeId.toString(),
+        orElse: () => null,
+      );
+
+      if (location != null) {
+        final lat = double.parse(location['local_x'].toString());
+        final lng = double.parse(location['local_y'].toString());
+        routePoints.add(LatLng(lat, lng));
+      }
+    }
+
     int currentIndex = floors.indexOf(selectedFloor);
     bool isAtTop = currentIndex == 0;
     bool isAtBottom = currentIndex == floors.length - 1;
@@ -112,12 +166,65 @@ class _MapPageState extends State<MapPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Placeholder for the Map
-          Container(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-            child: const Center(
-              child: Icon(Icons.map, size: 100, color: Colors.grey),
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: const LatLng(41.1785, -8.6075),
+              initialZoom: 18.0,
+              minZoom: 17.0,
+              maxZoom: 22.0,
+              cameraConstraint: CameraConstraint.contain(bounds: isepBounds),
             ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.tassi.app',
+              ),
+
+              if (routePoints.isNotEmpty)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: routePoints,
+                      color: theme.colorScheme.primary,
+                      strokeWidth: 5.0,
+                      borderColor: Colors.white,
+                      borderStrokeWidth: 2.0,
+                    ),
+                  ],
+                ),
+
+              MarkerLayer(
+                markers: allLocations.where((loc) {
+
+                  bool isSameFloor = "F${loc['floor']}" == selectedFloor;
+                  if (!isSameFloor) return false;
+
+                  final sequence = widget.activeRouteData?['location_sequence'] as List<dynamic>? ?? [];
+                  final routeNodeIdsFromWidget = sequence.map((id) => id.toString()).toSet();
+
+                  final allActiveNodes = {...routeNodeIdsFromWidget, ...activeRouteNodeIds};
+
+                  bool isUserHere = currentBeacon?.id == loc['beacon_uuid'];
+                  bool isPartOfRoute = allActiveNodes.contains(loc['id'].toString());
+
+                  return isPartOfRoute || isUserHere;
+                }).map((loc) {
+                  final lat = double.parse(loc['local_x'].toString());
+                  final lng = double.parse(loc['local_y'].toString());
+                  bool isUserHere = currentBeacon?.id == loc['beacon_uuid'];
+
+                  return Marker(
+                    point: LatLng(lat, lng),
+                    width: 60,
+                    height: 60,
+                    child: isUserHere
+                        ? _buildUserLocationMarker(theme)
+                        : _buildStationaryMarker(theme),
+                  );
+                }).toList(),
+              ),
+            ],
           ),
 
           if (currentInstruction.isNotEmpty)
@@ -360,15 +467,72 @@ class _MapPageState extends State<MapPage> {
             child: FloatingActionButton(
               heroTag: 'recenter_fab',
               onPressed: () {
-                // Recenter map logic
+                _mapController.move(const LatLng(41.1785, -8.6075), 18.0);
               },
               backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.8),
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
               child: Icon(Icons.location_on, color: theme.colorScheme.primary),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserLocationMarker(ThemeData theme) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Anel externo com opacidade (Efeito de pulsação visual)
+        Container(
+          width: 45,
+          height: 45,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
+        ),
+        // Ponto Central
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.navigation,
+            color: Colors.white,
+            size: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStationaryMarker(ThemeData theme) {
+    return Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.6),
+          width: 4,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
